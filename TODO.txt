@@ -1,0 +1,10 @@
+Package as proper library
+
+Fix the error printing
+
+Estimate sinussoidal start conditions with fourier phase
+
+Add gaussian fit model
+
+Add Voigt
+
