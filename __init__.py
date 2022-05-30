@@ -1,49 +1,14 @@
 import numpy as np
 import scipy.optimize
 import matplotlib.pyplot as plt
-import types
 import math as m
-import FitUtility
-import FitModels
+import utility
+import models
 pi = np.pi
 
-
-def format_error(y, dy):
-    '''return a nice string representation of a number and its error'''
-    if np.isinf(dy):
-    	return '%g.3(inf)'%y
-    elif np.isnan(dy):
-    	return '%g.3(nan)'%y
-
-    dy = np.abs(dy)
-
-    y_exponent = int(m.floor(np.log10(np.abs(y)))) # order of magnitude
-    dy_exponent = int(m.floor(np.log10(dy)))
-    
-    # choose how many digits we want on the y
-    exp_diff = y_exponent-dy_exponent # order of magnitude diff from y to dy
-    dy_str = ('%.20g'%(dy*10**(exp_diff+2))).replace('.','') # string representation without any decimal
-    flag1 = str(dy)[0]=='1' # first digit is 1
-    y_precision = exp_diff + int(flag1) # number of digits on y after decimal 
-    
-    # TODO: Make error round corrently
-
-    s = ('%.*f' % (y_precision, y/10**y_exponent) + '(' +
-        dy_str[0:(1+int(flag1))] +
-        ')e' + str(y_exponent) )
-    return s
-
-
-def clean_data(x,y):
-	'''remove any NaN or inf in the data'''
-
-	filt_x = np.logical_and(np.isnan(x)==0, np.isinf(x)==0)
-	filt_y = np.logical_and(np.isnan(y)==0, np.isinf(y)==0)
-
-	filt = np.logical_and(filt_x, filt_y)
-	n_bad = np.sum(filt == 0)
-
-	return (x[filt], y[filt], n_bad)
+def fit(*args, **kwargs)
+	"""Provides a short cut to creating a Wrapper object and calling fit()"""
+	return Wrapper(*args, **kwargs).fit()
 
 class Wrapper:
 	def __init__(self, fittype, x, y, dy=None, guess=None, bounds=None, fix=None, verbose=False):
@@ -53,7 +18,7 @@ class Wrapper:
 		self.fix = fix
 
 		# clean data
-		self.x, self.y, n_bad = clean_data(x, y)
+		self.x, self.y, n_bad = utility.clean_data(x, y)
 		if n_bad >0:
 			print(f'Warning: Removing {n_bad} cases of NaN or Inf from data to enable fitting')
 		
@@ -71,7 +36,7 @@ class Wrapper:
 
 		# find fit model
 		try:
-			self.model = getattr(FitModels, fittype)
+			self.model = getattr(models, fittype)
 		except AttributeError:
 			raise Exception(f'No fit model named "{fittype}"')
 
@@ -176,7 +141,7 @@ class Wrapper:
 				if self.fix and self.fitvars[i] in self.fix:
 					summary += '\n'+self.fitvars[i].ljust(5)+' (FIXED)'
 				else:
-					summary += '\n'+self.fitvars[i].ljust(5) +': ' + format_error(self.params[i], self.errors[i]) 
+					summary += '\n'+self.fitvars[i].ljust(5) +': ' + utility.format_error(self.params[i], self.errors[i])
 
 			# print degrees of freedom
 			summary += f'\n\nN DOF: {self.n_DOF}'
