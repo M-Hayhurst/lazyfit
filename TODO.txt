@@ -1,8 +1,8 @@
-Package as proper library
+Package as proper library DONE
 
 Fix the error printing
 
-Estimate sinussoidal start conditions with fourier phase
+Estimate sinussoidal start conditions with fourier phase DONE
 
 Add gaussian fit model
 
