@@ -61,3 +61,14 @@ def get_main_fourier_component(t, y, ignore_dc=True):
 	max_phase = np.angle(yf[max_ind]) % (2*np.pi)  # fold into range 0..2pi to conform with fit limits
 
 	return max_freq, max_phase
+
+
+def get_voigt_FWHM(G, L):
+	'''returns the FWHM of a Voigt distribution given its Gassian FWHM G and lorentzian FWHM L'''
+
+	# equation taken from https://en.wikipedia.org/wiki/Voigt_profile
+	return 0.5346*L + np.sqrt(0.2166*L**2+G**2)
+
+def sigma_to_FWHM(s):
+	'''calculate FWHM of gaussian given its standard deviation'''
+	return s*2.3548200450309493  # 2*sqrt(2*log(2))

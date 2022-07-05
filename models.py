@@ -1,10 +1,37 @@
 import numpy as np
 import math as m
-import FitUtility
+import lazyfit.utility as utility
 import types
+
+import scipy.special
+
 pi = np.pi
 
 inf = float('inf')
+
+###########################################
+# generic functions
+###########################################
+
+def peak_finder(x, y):
+	'''generic function for finding the biggest peak in (x,y) data.
+	Returns a tupple of peak amplitude, position, FWHM and background'''
+
+	B = np.min(y)  # background estimate
+	A = np.max(y) - B  # peak amplitude
+	x0 = x[np.argmax(y)]  # position estimate
+
+	# the hard part, estimating the FWHM.
+	# this we do by finding the value where the y drops by 0.5
+	# note, we assume that x is in increasing order!
+	filter_under_half = (y - B) < A / 2  # filter where background corrected signal is below 50% of peak
+	a = x[np.max(
+		np.argwhere(filter_under_half * (x < x0)))]  # x value of the first point to the left of the peak going below
+	b = x[np.min(
+		np.argwhere(filter_under_half * (x > x0)))]  # x value of the first point to the right of the peak going below
+	FWHM = np.abs(b - a)  # full width half maximum
+
+	return [A, x0, FWHM, B]
 
 
 ###########################################
@@ -17,18 +44,8 @@ def func_lorentz(x, A, x0, FWHM, B):
 	return A/(1+(x-x0)**2/(FWHM/2)**2) + B
 
 def guess_lorentz(x, y):
+	return peak_finder(x,y)
 
-	B = np.min(y)		# background estimate
-	A = np.max(y) - B 	# peak amplitude
-	x0 = x[np.argmax(y)]
-
-	# the hard part, guess the FWHM. 
-	# this we do by finding the value where the y drops by 0.5
-	filter_over_half = (y-B)>A/2
-	a = x[np.min(np.argwhere(filter_over_half))] # x value of first element over threshold
-	b = x[np.max(np.argwhere(filter_over_half))] # x value of last element over threshold
-	FWHM = np.abs(b-a)
-	return [A, x0, FWHM, B]
 
 def bounds_lorentz(x, y):
 	# assume peak to be withing x data, define FWHM to be positive
@@ -94,7 +111,14 @@ def func_sin(x, A, f, phi, B):
 def guess_sin(x,y):
 	B = np.mean(y)
 	A = np.sqrt(2)*np.std(y)
-	f, phi = FitUtility.get_main_fourier_component(x,y)
+	f, _ = utility.get_main_fourier_component(x,y)
+
+	# it turns out that a more robust phi estimate can be constructed by trying 8 different values, and calculating the overlap with the data
+	phi_list = np.arange(0, 2 * pi, pi / 4)
+	overlap = np.zeros(8)
+	for i, phi in enumerate(phi_list):
+		overlap[i] = np.sum((y - B) * func_sin(x, 1, f, phi, 0))
+	phi = phi_list[np.argmax(overlap)]
 
 	return [A, f, phi, B]
 
@@ -234,3 +258,120 @@ rabi.f = func_rabi
 rabi.guess = guess_rabi
 rabi.string = 'A*sin((x/x_pi)*pi/2)^2+B'
 rabi.bounds = bounds_rabi
+
+
+###########################################
+# Unnormalised gaussian
+###########################################
+
+def func_gaussian(x, A, x0, s, B):
+	"""Gaussian + B"""
+	return A * np.exp(-(x-x0)**2/(2*s**2)) + B
+
+def guess_gaussian(x, y):
+	A, x0, FWHM, B =  peak_finder(x, y)
+	return [A, x0, FWHM/2.35, B]  # convert FWHM to standard deviation
+
+
+def bounds_gaussian(x, y):
+	# assume peak to be withing x data, define sigma to be positive
+	lb = [-inf, np.min(x), 0, -inf]
+	ub = [inf, np.max(x), inf, inf]
+	return lb, ub
+
+
+gaussian = types.SimpleNamespace()
+gaussian.f = func_gaussian
+gaussian.guess = guess_gaussian
+gaussian.string = 'A*exp(-(x-x0)^2/(2*s^2))+B'
+gaussian.tex = r'$Ae^{-(x-x_0)^2/(2s^2)}+B$'
+gaussian.bounds = bounds_gaussian
+
+###########################################
+# Normalised gaussian
+###########################################
+
+def func_normgaussian(x, A, x0, s, B):
+	"""normalised gaussian + B"""
+	return A * np.exp(-(x-x0)**2/(2*s**2))/(np.sqrt(2*pi)*s) + B
+
+def guess_normgaussian(x, y):
+	A, x0, FWHM, B =  peak_finder(x, y)
+	s = FWHM/2.35
+	A *= np.sqrt(2*pi)*s
+	return [A, x0, s, B]  # convert FWHM to standard deviation
+
+
+def bounds_normgaussian(x, y):
+	# assume peak to be withing x data, define sigma to be positive
+	lb = [0, np.min(x), 0, -inf]
+	ub = [inf, np.max(x), inf, inf]
+	return lb, ub
+
+
+normgaussian = types.SimpleNamespace()
+normgaussian.f = func_normgaussian
+normgaussian.guess = guess_normgaussian
+normgaussian.string = 'A*Norm(x;x0,s)+B'
+normgaussian.tex = r'$\frac{Ae^{-(x-x_0)^2/(2s^2)}}{\sqrt{2\pi}s}+B$'
+normgaussian.bounds = bounds_normgaussian
+
+###########################################
+# linear
+###########################################
+
+def func_lin(x, A, B):
+	"""normalised gaussian + B"""
+	return A * x + B
+
+def guess_lin(x, y):
+	# use barlow
+	pass
+
+def bounds_lin(x, y):
+	# assume peak to be withing x data, define sigma to be positive
+	lb = [-inf, -inf]
+	ub = [inf, inf]
+	return lb, ub
+
+
+lin = types.SimpleNamespace()
+lin.f = func_lin
+lin.guess = guess_lin
+lin.string = 'A*x+B'
+lin.tex = r'$Ax+B'
+lin.bounds = bounds_lin
+
+###########################################
+# Voigt
+###########################################
+
+
+def  func_voigt(x, A, x0, L, G, B):
+	'''voigt with lorentzian FWHM L and Gaussian FWHM G and background b'''
+	return A*scipy.special.voigt_profile((x-x0), utility.sigma_to_FWHM(G), L*2) + B
+	pass
+
+
+def guess_voigt(x,y):
+	# do basic peak detection
+	A, x0, FWHM, B = peak_finder(x, y)
+
+	# we will assume that L=G, substite into the equation for effective Voigt linewidth (see utility.get_Voigt_FWHM() ) and solve for L
+
+	L = FWHM/(0.5346+np.sqrt(1+0.2166))
+
+	return [A, x0, L, L, B ]
+
+
+def bounds_voigt(x, y):
+	lb = [-inf, np.min(x), 0, 0, -inf]
+	ub = [inf, np.max(x), inf, inf, inf]
+	return lb, ub
+
+voigt = types.SimpleNamespace()
+voigt.f = func_voigt
+voigt.guess = guess_voigt
+voigt.string = 'A*Voigt(x;x0,L,G)+B'
+#voigt.tex = r'$Ax+B'
+voigt.bounds = bounds_voigt

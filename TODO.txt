@@ -1,10 +1,30 @@
+FEATURES
+
 Package as proper library DONE
 
-Fix the error printing
+Fix the error printing DONE
 
 Estimate sinussoidal start conditions with fourier phase DONE
 
-Add gaussian fit model
+More robust sin freq guess by using window in fft and fitting fft peak
 
-Add Voigt
+Calculate chi2 probability
+
+Enable special features, ie. gaussian FWHM
+
+Wolf Waldowitz runs test?
+
+
+MODELS
+
+Gaussian DONE
+Voigt
+Linear
+Logistic
+Decay with IRF
+Rabi
+
+
+
+I've implicitly assumed that x-values are increasing
 
