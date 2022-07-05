@@ -2,16 +2,20 @@ import numpy as np
 import scipy.optimize
 import matplotlib.pyplot as plt
 import math as m
-import utility
-import models
 pi = np.pi
+import lazyfit.utility as utility
+import lazyfit.models as models
 
-def fit(*args, **kwargs)
+def fit(fittype, x, y, dy=None, guess=None, bounds=None, fix={}, verbose=False, options = {}):
 	"""Provides a short cut to creating a Wrapper object and calling fit()"""
-	return Wrapper(*args, **kwargs).fit()
+	f = Wrapper(fittype, x, y, dy, guess, bounds, fix, verbose)
+	f.fit(options)
+	return f
+
+epsilon = 1E-20
 
 class Wrapper:
-	def __init__(self, fittype, x, y, dy=None, guess=None, bounds=None, fix=None, verbose=False):
+	def __init__(self, fittype, x, y, dy=None, guess=None, bounds=None, fix={}, verbose=False):
 
 		self.fittype = fittype
 		self.verbose = verbose
@@ -60,23 +64,33 @@ class Wrapper:
 		else:
 			self.bounds = bounds
 
-		# fix necessary varibles if neceassary
-		if fix is not None:
-			for key, val in fix:
-				# find the index of the key in the fitting params
-				ind = np.argwhere([key == k for k in self.fitvars])
+		# fix varibles if neceassary
+		for key, val in fix.items():
 
-				# go to this index, fix bounds and guess to the value
-				self.bounds[0][ind] = val
-				self.bounds[1][ind] = val 
-				self.guess[ind] = val 
+			# find the index of the key in the fitting params
+			ind = self.fitvars.index(key)
+
+			# go to this index, fix bounds and guess to the value
+			self.bounds[0][ind] = val*0.999999 - epsilon
+			self.bounds[1][ind] = val*1.000001 + epsilon
+			self.guess[ind] = val
 
 
 	def fit(self, options={}):
+		# do the actual fit
 		self.fit_res = scipy.optimize.curve_fit(self.f, self.x, self.y, self.guess, bounds=self.bounds, **options)
+
+		# save parameters and errors as arrays
 		self.params = self.fit_res[0]
 		self.COVB = self.fit_res[1]
 		self.errors = np.sqrt(np.diag(self.COVB))
+
+		# also save fit paramters and errors as dicts
+		self.params_dict, self.errors_dict = {},{}
+		for i, var in enumerate(self.fitvars):
+			self.params_dict[var] = self.params[i]
+			self.errors_dict[var] = self.errors[i]
+
 
 	def get_chi2(self):
 		return np.sum( (self.y-self.predict(self.x))**2/self.dy**2)
@@ -139,7 +153,7 @@ class Wrapper:
 			for i in range(len(self.fitvars)):
 				#summary += '\n%s: %2.2g±%2.2g'%(self.fitvars[i].ljust(5), self.params[i], self.errors[i]) 
 				if self.fix and self.fitvars[i] in self.fix:
-					summary += '\n'+self.fitvars[i].ljust(5)+' (FIXED)'
+					summary += '\n'+self.fitvars[i].ljust(5)+': %.3g (FIXED)'%self.guess[i]
 				else:
 					summary += '\n'+self.fitvars[i].ljust(5) +': ' + utility.format_error(self.params[i], self.errors[i])
 
@@ -160,6 +174,9 @@ class Wrapper:
 
 		
 	def plot_guess(self, N=200):
+
+		fig = plt.figure()
+
 		if self.has_dy:
 			print(self.x.shape)
 			print(self.y.shape)
