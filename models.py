@@ -206,12 +206,12 @@ freeramsey.bounds = bounds_freeramsey
 def func_twolvlsat(x, Psat, Imax):
 	"""Two level saturation.
 	Note that Imax is the intensity for x->inf"""
-	return 2*Imax*x/Psat/(1+2*x/Psat)
+	return Imax/(1+Psat/x)
 
 def guess_twolvlsat(x,y):
 	
 	Imax = np.max(y)
-	Psat = x[np.min(np.argwhere(y>Imax*0.66))] # take Psat as first point where y goes over 2/3 of max
+	Psat = x[np.min(np.argwhere(y>Imax*0.5))] # take Psat as first point where y goes over 1/2 of max
 
 	return [Psat, Imax]
 
@@ -242,8 +242,8 @@ def guess_rabi(x,y):
 	# use the same guess as sin and set T2s too be half the x range
 	B = np.min(y)
 	A = np.max(y)-B
-	x_pi = x[np.argmax(y)] # guess that the first pi is the hightest... this may fail
-
+	#x_pi = x[np.argmax(y)] # guess that the first pi is the hightest... this may fail
+	x_pi = 0.5 / utility.get_main_fourier_component(x, y)[0]
 	return [A, x_pi, B]
 
 def bounds_rabi(x, y):
@@ -326,7 +326,8 @@ def func_lin(x, A, B):
 
 def guess_lin(x, y):
 	# use barlow
-	pass
+	# TODO
+	return [0,0]
 
 def bounds_lin(x, y):
 	# assume peak to be withing x data, define sigma to be positive
@@ -349,8 +350,13 @@ lin.bounds = bounds_lin
 
 def  func_voigt(x, A, x0, L, G, B):
 	'''voigt with lorentzian FWHM L and Gaussian FWHM G and background b'''
-	return A*scipy.special.voigt_profile((x-x0), utility.sigma_to_FWHM(G), L*2) + B
-	pass
+
+	# note that the scipy function takes a gaussian standard deviation and a lorentzian half width half maximmum.
+	# as we specify FWHM for both distributions we need to convert appropriately
+	# we also divide with the function evaluated at zero detuning to ensure an amplitude of 1 at resonance
+	return A*scipy.special.voigt_profile((x-x0), utility.FWHM_to_sigma(G), L/2)\
+		   /scipy.special.voigt_profile(0, utility.FWHM_to_sigma(G), L/2) \
+		   + B
 
 
 def guess_voigt(x,y):
@@ -375,3 +381,70 @@ voigt.guess = guess_voigt
 voigt.string = 'A*Voigt(x;x0,L,G)+B'
 #voigt.tex = r'$Ax+B'
 voigt.bounds = bounds_voigt
+
+
+###########################################
+# logistic
+###########################################
+
+def func_logistic(x, A, B, x0, k,):
+	"""logistic + background"""
+	return B + A/(1+exp(-(x-x0)*k))
+
+def guess_logistic(x, y):
+	B = np.min(y)
+	A = np.max(y) - np.min(y)
+	x0 = x[np.argmin(np.abs(y-B-A/2))] # find where y is at the mid value
+	x10 = x[np.argmin(np.abs(y-B-A*0.1))]# 10% percentile
+	x90 = x[np.argmin(np.abs(y - B - A * 0.9))]  # 90% percentile
+	k = 1/(x90-x10)
+
+	return [A,B, x0, k]
+
+def bounds_logistic(x, y):
+	# assume peak to be withing x data, define FWHM to be positive
+	lb = [0, -inf, np.min(x), 0]
+	ub = [inf, inf, np.max(x), inf]
+
+	return (lb, ub)
+
+logistic = types.SimpleNamespace()
+logistic.f = func_logistic
+logistic.guess = guess_logistic
+logistic.string = 'A/(1+exp(-(x-x0)*k))+B'
+#logistic.tex = r'$\frac{A}{1+(x-x0)^2/(FWHM/2)^2}+B$'
+logistic.bounds = bounds_logistic
+
+
+###########################################
+# logistic pulse
+###########################################
+
+def func_logpulse(x, A, B, x0, x1, k0, k1):
+	"""the logistic functions multiplied together with opposite directions"""
+	return B + A*func_logistic(1, 0, x0, k0)*func_logistic(1, 0, x1, -k1) # second logpulse should be descending
+
+def guess_logpulse(x, y):
+	B = np.min(y)
+	A = np.max(y) - np.min(y)
+	x0 = x[np.min(np.argwhere(y>B+A/2))] # find first x where y above half max
+	x1 = x[np.max(np.argwhere(y>B+A/2))] # find last x where y above half max
+	k = 1/(x1-x0)*0.1 # just assume for now that the risetime 10% of FWHM. This should be good enough for initial condition
+	return [A, B, x0, x1, k, k]
+
+def bounds_logpulse(x, y):
+	# assume peak to be withing x data, define FWHM to be positive
+	lb = [0, -inf, np.min(x), np.min(x), 0, 0]
+	ub = [inf, inf, np.max(x), np.max(x), inf, inf]
+
+	return (lb, ub)
+
+logpulse = types.SimpleNamespace()
+logpulse.f = func_logpulse
+logpulse.guess = guess_logpulse
+logpulse.string = 'A/((1+exp(-(x-x0)k0))(1+exp(-(x+x0)k0)) + B'
+#logpulse.tex = r'$\frac{A}{1+(x-x0)^2/(FWHM/2)^2}+B$'
+logpulse.bounds = bounds_logpulse
+
+
+
