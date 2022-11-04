@@ -100,6 +100,53 @@ exp.bounds = bounds_exp
 
 
 ###########################################
+# exponential decay convolved  with gaussian response
+###########################################
+
+def func_convexp(x, amp, Gamma, bg,  x0, s):
+	"""exp decay convolved with gaussian with standard deviation s and mean x0"""
+
+	if s == 0:
+		return (x>=x0) * amp * np.exp(-Gamma*(x-x0)) + bg
+
+	peakval = np.exp(0.5*Gamma**2*s**2)*scipy.special.erfc(Gamma*s/np.sqrt(2))
+	return (amp/peakval)*np.exp(-Gamma*(x-x0)+0.5*Gamma**2*s**2)*scipy.special.erfc((-(x-x0)/s+Gamma*s)/np.sqrt(2)) + bg
+
+def guess_convexp(x, y):
+
+	x0 = x[np.argmax(y)]
+	amp = np.max(y)
+	bg = np.min(y)
+
+	# find 1/e time. This must occour after the maximum. For this reason, we define a new set of xvalues. This is need incase the
+	try:
+		filt = x > x0
+		x1 = x[filt]
+		y1 = y[filt]
+
+		e_time = x1[np.min(np.argwhere(y1 - bg < amp * np.exp(-1)))]
+		Gamma = 1 / e_time
+	except Exception:
+		Gamma = 0
+
+	# assume that the instrument response correspondsto 10% of the decay time
+	s = 0.1/Gamma
+
+	return [amp, Gamma, bg, x0, s]
+
+def bounds_convexp(x,y):
+	lb = [0, 0, -inf, -inf, 0]
+	ub = [inf, inf, inf, inf, inf]
+	return lb,ub
+
+convexp = types.SimpleNamespace()
+convexp.f = func_convexp
+convexp.guess = guess_convexp
+convexp.string = 'amp*exp(-x*Gamma) conv N(x;0,s) + bg'
+convexp.bounds = bounds_convexp
+
+
+###########################################
 # Sinussoidal
 ###########################################
 
@@ -141,62 +188,29 @@ sin.bounds = bounds_sin
 ###########################################
 
 
-def func_ramsey(x, A, f, phi, B, T2s):
+def func_ramsey(x, A, f, phi, B, T2s, alpha):
 	"""Ramsey oscillation"""
-	return A*np.sin(x*f*2*pi+phi)*np.exp(-x**2/T2s**2)+B
+	return A*np.sin(x*f*2*pi+phi)*np.exp(-(x/T2s)**alpha)+B
 
 def guess_ramsey(x,y):
 	
-	# use the same guess as sin and set T2s too be half the x range
-	guess = guess_sin(x,y)
-	guess.append(np.max(x)/2)
+	# use the same guess as sin and set T2s too be half the x range and alpha t0
+	guess = guess_sin(x,y) + [np.max(x)/2, 2]
 
 	return guess
 
 def bounds_ramsey(x, y):
 
-	lb = [0, 0, 0, -inf, 0]
-	up = [inf, inf, 2*pi, inf, inf]
+	lb = [0, 0, 0, -inf, 0, 0]
+	up = [inf, inf, 2*pi, inf, inf, inf]
 
 	return (lb,up)
 
 ramsey = types.SimpleNamespace()
 ramsey.f = func_ramsey
 ramsey.guess = guess_ramsey
-ramsey.string = 'A*sin(x*f*2pi+phi)*exp(-x^2/T2s^2)+B'
+ramsey.string = 'A*sin(x*f*2pi+phi)*exp(-(x/T2s)^alpha)+B'
 ramsey.bounds = bounds_ramsey
-
-###########################################
-# Ramsey with free exponent
-###########################################
-
-
-def func_freeramsey(x, A, f, phi, B, T2s, alpha):
-	"""Ramsey oscillation"""
-	return A*np.sin(x*f*2*pi+phi)*np.exp(-(x/T2s)**alpha)+B
-
-def guess_freeramsey(x,y):
-	
-	# use the same guess as sin and set T2s too be half the x range
-	guess = guess_sin(x,y)
-	guess.append(np.max(x)/2)
-	guess.append(1.5)
-
-	return guess
-
-def bounds_freeramsey(x, y):
-
-	lb = [0, 0, 0, -inf, 0,0]
-	up = [inf, inf, 2*pi, inf, inf, inf]
-
-	return (lb,up)
-
-freeramsey = types.SimpleNamespace()
-freeramsey.f = func_freeramsey
-freeramsey.guess = guess_freeramsey
-freeramsey.string = 'A*sin(x*f*2pi+phi)*exp(-(x/T2s)^alpha)+B'
-freeramsey.bounds = bounds_freeramsey
-
 
 ###########################################
 # two level saturation
@@ -206,6 +220,7 @@ freeramsey.bounds = bounds_freeramsey
 def func_twolvlsat(x, Psat, Imax):
 	"""Two level saturation.
 	Note that Imax is the intensity for x->inf"""
+
 	return Imax/(1+Psat/x)
 
 def guess_twolvlsat(x,y):
@@ -389,7 +404,7 @@ voigt.bounds = bounds_voigt
 
 def func_logistic(x, A, B, x0, k,):
 	"""logistic + background"""
-	return B + A/(1+exp(-(x-x0)*k))
+	return B + A/(1+np.exp(-(x-x0)*k))
 
 def guess_logistic(x, y):
 	B = np.min(y)
@@ -397,7 +412,7 @@ def guess_logistic(x, y):
 	x0 = x[np.argmin(np.abs(y-B-A/2))] # find where y is at the mid value
 	x10 = x[np.argmin(np.abs(y-B-A*0.1))]# 10% percentile
 	x90 = x[np.argmin(np.abs(y - B - A * 0.9))]  # 90% percentile
-	k = 1/(x90-x10)
+	k = 5/(x90-x10)
 
 	return [A,B, x0, k]
 
@@ -422,14 +437,14 @@ logistic.bounds = bounds_logistic
 
 def func_logpulse(x, A, B, x0, x1, k0, k1):
 	"""the logistic functions multiplied together with opposite directions"""
-	return B + A*func_logistic(1, 0, x0, k0)*func_logistic(1, 0, x1, -k1) # second logpulse should be descending
+	return B + A*func_logistic(x, 1, 0, x0, k0)*func_logistic(x, 1, 0, x1, -k1) # second logpulse should be descending
 
 def guess_logpulse(x, y):
 	B = np.min(y)
 	A = np.max(y) - np.min(y)
 	x0 = x[np.min(np.argwhere(y>B+A/2))] # find first x where y above half max
 	x1 = x[np.max(np.argwhere(y>B+A/2))] # find last x where y above half max
-	k = 1/(x1-x0)*0.1 # just assume for now that the risetime 10% of FWHM. This should be good enough for initial condition
+	k = 5/(x1-x0)*10 # just assume for now that the risetime 10% of FWHM. This should be good enough for initial condition
 	return [A, B, x0, x1, k, k]
 
 def bounds_logpulse(x, y):
