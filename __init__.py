@@ -5,6 +5,7 @@ import math as m
 pi = np.pi
 import lazyfit.utility as utility
 import lazyfit.models as models
+import inspect
 
 def fit(fittype, x, y, dy=None, guess=None, bounds=None, fix={}, verbose=False, options = {}):
 	"""Provides a short cut to creating a Wrapper object and calling fit()"""
@@ -46,7 +47,7 @@ class Wrapper:
 
 		# extrac stuff from fit model
 		self.f = self.model.f
-		self.fitvars = self.f.__code__.co_varnames[1::]
+		self.fitvars = inspect.getargspec(self.f).args[1::] # get fit function arguments but without 'x' which is always first argument
 		self.n_DOF = len(self.x) - len(self.fitvars)
 
 		# generate guess
@@ -99,7 +100,7 @@ class Wrapper:
 		return self.f(x, *self.params)
 
 
-	def plot(self, N=200, print_params = True, plot_guess = False, use_log = False, plot_residuals = False, figsize=None, fmt='o'):
+	def plot(self, N=200, print_params = True, plot_guess = False, logy = False, plot_residuals = False, figsize=None, fmt='o'):
 		
 		fig = plt.figure(figsize=figsize)
 
@@ -119,7 +120,7 @@ class Wrapper:
 		if plot_guess:
 			plt.plot(xdummy, self.f(xdummy, *self.guess), label='Guess')
 
-		if use_log:
+		if logy:
 			plt.yscale('log')
 
 		# make legend
