@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.optimize
+import scipy.stats
 import matplotlib.pyplot as plt
 import math as m
 pi = np.pi
@@ -99,6 +100,11 @@ class Wrapper:
 	def predict(self, x):
 		return self.f(x, *self.params)
 
+	def get_pval(self):
+		'''Return probability of null hypothesis given chisquared sum, and degrees of freedom.
+		Only works if you supplied errors to the fitting routine'''
+		return scipy.stats.distributions.chi2.sf(self.get_chi2(), self.n_DOF)
+
 
 	def plot(self, N=200, print_params = True, plot_guess = False, logy = False, plot_residuals = False, figsize=None, fmt='o'):
 		
@@ -110,30 +116,29 @@ class Wrapper:
 			ax1 = plt.gca()
 
 		if self.has_dy:
-			plt.errorbar(self.x, self.y, self.dy, fmt=fmt, label='Data')
+			ax1.errorbar(self.x, self.y, self.dy, fmt=fmt, label='Data', zorder=0)
 		else:
-			plt.plot(self.x, self.y, fmt, label='Data')
+			ax1.plot(self.x, self.y, fmt, label='Data', zorder=0)
 
-		xdummy = np.linspace(np.min(self.x), np.max(self.x), N)
-		plt.plot(xdummy, self.predict(xdummy), label='Fit')
+		xdummy = np.linspace(np.min(self.x), np.max(self.x), N) # create finer xaxis for fit and guess
+		ax1.plot(xdummy, self.predict(xdummy), label='Fit', zorder=10) # plot fig
 
 		if plot_guess:
-			plt.plot(xdummy, self.f(xdummy, *self.guess), label='Guess')
+			ax1.plot(xdummy, self.f(xdummy, *self.guess), label='Guess', zorder=5) # plot guess
 
 		if logy:
-			plt.yscale('log')
+			ax1.set_yscale('log')
 
 		# make legend
-		ax = plt.gca()
-		ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
+		ax1.legend(loc='upper left', bbox_to_anchor=(1, 1), frameon=False)
 
 		# plot residuals in subplot
 		if plot_residuals:
 			ax2 = plt.subplot2grid((3,1), (2,0))
 			if self.has_dy:
-				plt.errorbar(self.x, self.y-self.predict(self.x), self.dy, fmt='o')
+				ax2.errorbar(self.x, self.y-self.predict(self.x), self.dy, fmt='o')
 			else:
-				plt.plot(self.x, self.y-self.predict(self.x))
+				ax2.plot(self.x, self.y-self.predict(self.x))
 
 			plt.ylabel('Residual')
 			plt.grid(axis='y')
@@ -151,12 +156,13 @@ class Wrapper:
 			summary += self.model.string +'\n'
 
 			# print fit paramters
+			ljust_len = max([len(s) for s in self.fitvars]) # find the longs fit variable name
+
 			for i in range(len(self.fitvars)):
-				#summary += '\n%s: %2.2g±%2.2g'%(self.fitvars[i].ljust(5), self.params[i], self.errors[i]) 
 				if self.fix and self.fitvars[i] in self.fix:
-					summary += '\n'+self.fitvars[i].ljust(5)+': %.3g (FIXED)'%self.guess[i]
+					summary += '\n'+self.fitvars[i].ljust(ljust_len)+': %.3g (FIXED)'%self.guess[i]
 				else:
-					summary += '\n'+self.fitvars[i].ljust(5) +': ' + utility.format_error(self.params[i], self.errors[i])
+					summary += '\n'+self.fitvars[i].ljust(ljust_len) +': ' + utility.format_error(self.params[i], self.errors[i])
 
 			# print degrees of freedom
 			summary += f'\n\nN DOF: {self.n_DOF}'
@@ -166,25 +172,24 @@ class Wrapper:
 				chi2 = self.get_chi2()
 				summary += '\nchi2    = %2.4g'%chi2
 				summary += '\nchi2red = %2.4f'%(chi2/self.n_DOF)
+				summary += '\np = %2.4f'%self.get_pval()
 
 			y_cord = 0.6 if plot_residuals else 0.7
 			plt.text(1.02, y_cord, summary, transform=ax1.transAxes, horizontalalignment='left', fontfamily='monospace', verticalalignment='top')
 
 		# return fig handle
 		return fig
-
 		
 	def plot_guess(self, N=200):
 
 		fig = plt.figure()
 
 		if self.has_dy:
-			print(self.x.shape)
-			print(self.y.shape)
-			print(self.dy.shape)
 			plt.errorbar(self.x, self.y, self.dy, fmt='o', label='Data')
 		else:
 			plt.plot(self.x, self.y, 'o', label='Data')
 
 		xdummy = np.linspace(np.min(self.x), np.max(self.x), N)
 		plt.plot(xdummy, self.f(xdummy, *self.guess), label='Guess')
+
+		return fig
