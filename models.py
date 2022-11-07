@@ -221,7 +221,11 @@ def func_twolvlsat(x, Psat, Imax):
 	"""Two level saturation.
 	Note that Imax is the intensity for x->inf"""
 
-	return Imax/(1+Psat/x)
+	if x is 0: # check if we are inputting a single python float, return 0 to avoid divide by zero error
+		return 0
+
+	with np.errstate(divide='ignore'): # ignore numpy divide by zero error
+		return Imax/(1+Psat/x)
 
 def guess_twolvlsat(x,y):
 	
@@ -240,7 +244,7 @@ def bounds_twolvlsat(x, y):
 twolvlsat = types.SimpleNamespace()
 twolvlsat.f = func_twolvlsat
 twolvlsat.guess = guess_twolvlsat
-twolvlsat.string = '2*Imax*x/Psat/(1+2*x/Psat)'
+twolvlsat.string = 'Imax*/(1+Psat/x)'
 twolvlsat.bounds = bounds_twolvlsat
 
 ###########################################
