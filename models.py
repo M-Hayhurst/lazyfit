@@ -344,9 +344,10 @@ def func_lin(x, A, B):
 	return A * x + B
 
 def guess_lin(x, y):
-	# use barlow
-	# TODO
-	return [0,0]
+	# this can be done analytically! See page 100 of Statistics by R. J. Barlow
+	A = (np.mean(x*y)-np.mean(x)*np.mean(y))/(np.mean(x**2)-np.mean(x)**2)
+	B = np.mean(y) - A*np.mean(x)
+	return [A,B]
 
 def bounds_lin(x, y):
 	# assume peak to be withing x data, define sigma to be positive
