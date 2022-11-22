@@ -141,6 +141,9 @@ class Wrapper:
             plt.ylabel('Residual')
             plt.grid(axis='y')
 
+            # get rid of the tick labels on the top xaxis
+            plt.setp(ax1.get_xticklabels(), visible=False)
+
         # print list of fitting parameters
         if print_params:
             # print model name
