@@ -66,13 +66,13 @@ lorentz.bounds = bounds_lorentz
 # exponential decay
 ###########################################
 
-def func_exp(x, amp, Gamma, bg):
+def func_exp(x, A, Gamma, B):
 	"""exp decay"""
-	return amp*np.exp(-x*Gamma) + bg
+	return A*np.exp(-x*Gamma) + B
 
 def guess_exp(x,y):
-	bg = np.min(y)
-	amp = np.max(y)-bg
+	B = np.min(y)
+	A = np.max(y)-B
 
 	# find 1/e time. This must occour after the maximum. For this reason, we define a new set of xvalues. This is need incase the 
 	try:
@@ -80,12 +80,12 @@ def guess_exp(x,y):
 		x1 = x[filt]
 		y1 = y[filt]
 
-		e_time = x1[np.min(np.argwhere(y1-bg<amp*np.exp(-1)))]
+		e_time = x1[np.min(np.argwhere(y1-B<A*np.exp(-1)))]
 		Gamma = 1/e_time
 	except Exception:
 		Gamma = 0
 
-	return [amp, Gamma, bg]
+	return [A, Gamma, B]
 
 def bounds_exp(x,y):
 	lb = [0,0,-inf]
@@ -95,7 +95,7 @@ def bounds_exp(x,y):
 exp = types.SimpleNamespace()
 exp.f = func_exp
 exp.guess = guess_exp
-exp.string = 'amp*exp(-x*Gamma) + bg'
+exp.string = 'A*exp(-x*Gamma) + B'
 exp.bounds = bounds_exp
 
 
@@ -103,20 +103,20 @@ exp.bounds = bounds_exp
 # exponential decay convolved  with gaussian response
 ###########################################
 
-def func_convexp(x, amp, Gamma, bg,  x0, s):
+def func_convexp(x, A, Gamma, B,  x0, s):
 	"""exp decay convolved with gaussian with standard deviation s and mean x0"""
 
 	if s == 0:
-		return (x>=x0) * amp * np.exp(-Gamma*(x-x0)) + bg
+		return (x>=x0) * A * np.exp(-Gamma*(x-x0)) + B
 
 	peakval = np.exp(0.5*Gamma**2*s**2)*scipy.special.erfc(Gamma*s/np.sqrt(2))
-	return (amp/peakval)*np.exp(-Gamma*(x-x0)+0.5*Gamma**2*s**2)*scipy.special.erfc((-(x-x0)/s+Gamma*s)/np.sqrt(2)) + bg
+	return (A/peakval)*np.exp(-Gamma*(x-x0)+0.5*Gamma**2*s**2)*scipy.special.erfc((-(x-x0)/s+Gamma*s)/np.sqrt(2)) + B
 
 def guess_convexp(x, y):
 
 	x0 = x[np.argmax(y)]
-	amp = np.max(y)
-	bg = np.min(y)
+	A = np.max(y)
+	B = np.min(y)
 
 	# find 1/e time. This must occour after the maximum. For this reason, we define a new set of xvalues. This is need incase the
 	try:
@@ -124,7 +124,7 @@ def guess_convexp(x, y):
 		x1 = x[filt]
 		y1 = y[filt]
 
-		e_time = x1[np.min(np.argwhere(y1 - bg < amp * np.exp(-1)))]
+		e_time = x1[np.min(np.argwhere(y1 - B < A * np.exp(-1)))]
 		Gamma = 1 / e_time
 	except Exception:
 		Gamma = 0
@@ -132,7 +132,7 @@ def guess_convexp(x, y):
 	# assume that the instrument response correspondsto 10% of the decay time
 	s = 0.1/Gamma
 
-	return [amp, Gamma, bg, x0, s]
+	return [A, Gamma, B, x0, s]
 
 def bounds_convexp(x,y):
 	lb = [0, 0, -inf, -inf, 0]
@@ -142,7 +142,7 @@ def bounds_convexp(x,y):
 convexp = types.SimpleNamespace()
 convexp.f = func_convexp
 convexp.guess = guess_convexp
-convexp.string = 'amp*exp(-x*Gamma) conv N(x;0,s) + bg'
+convexp.string = 'A*exp(-x*Gamma) conv N(x;0,s) + B'
 convexp.bounds = bounds_convexp
 
 
