@@ -25,13 +25,58 @@ def peak_finder(x, y):
 	# this we do by finding the value where the y drops by 0.5
 	# note, we assume that x is in increasing order!
 	filter_under_half = (y - B) < A / 2  # filter where background corrected signal is below 50% of peak
-	a = x[np.max(
-		np.argwhere(filter_under_half * (x < x0)))]  # x value of the first point to the left of the peak going below
-	b = x[np.min(
-		np.argwhere(filter_under_half * (x > x0)))]  # x value of the first point to the right of the peak going below
-	FWHM = np.abs(b - a)  # full width half maximum
+	try:
+		a = x[np.max(
+			np.argwhere(filter_under_half * (x < x0)))]  # x value of the first point to the left of the peak going below
+		b = x[np.min(
+			np.argwhere(filter_under_half * (x > x0)))]  # x value of the first point to the right of the peak going below
+		FWHM = np.abs(b - a)  # full width half maximum
+	except ValueError: # catch the case where argwhere works on an empty array
+		FWHM = 0
 
 	return [A, x0, FWHM, B]
+
+
+def find_2peaks(x, y):
+	'''return x,y coordinates'''
+	distance = 0.9 * len(x)
+
+	while True:
+		if distance < 1:  # we will never find two peaks
+			indices = [0, len(x) - 1]
+			break
+		indices = scipy.signal.find_peaks(y, width=5, distance=distance, prominence=10)[0]
+		if len(indices) == 2:  # correct number of peaks
+			break
+		elif len(indices) > 2:  # we for some reason got too many peaks, return the outer ones
+			indices = [indices[0], indices[-1]]
+			break
+
+		else:
+			distance *= 0.6
+
+	B = np.min(y)  # background estimate
+	A1, A2 = y[indices[0]] - B, y[indices[1]] - B  # peak amplitude
+	x1, x2 = x[indices[0]], x[indices[1]]
+
+	# fist peak, look at left side
+	filter_under_half = (y - B) < A1 / 2  # filter where background corrected signal is below 50% of peak
+	try:
+		FWHM1 = 2*np.abs(x[np.max(np.argwhere(filter_under_half * (x < x1)))]-x1)
+	except ValueError:
+		FWHM1 = 0
+
+	# second peak, look at right side
+	filter_under_half = (y - B) < A2 / 2  # filter where background corrected signal is below 50% of peak
+	try:
+		FWHM2 = 2*np.abs(x2-x[np.min(np.argwhere(filter_under_half * (x > x2)))])
+	except ValueError:
+		FWHM2 = 0
+
+	return  [A1, x1, FWHM1, A2, x2, FWHM2, B]
+
+
+
 
 
 ###########################################
@@ -98,6 +143,31 @@ exp.guess = guess_exp
 exp.string = 'A*exp(-x*Gamma) + B'
 exp.bounds = bounds_exp
 
+
+###########################################
+# biexponential decay
+###########################################
+
+def func_biexp(x, A1, Gamma1, A2, Gamma2, B):
+	"""Biexponential decay"""
+	return A1*np.exp(-x*Gamma1) + A2*np.exp(-x*Gamma2) + B
+
+def guess_biexp(x,y):
+
+	# use the monoexponential guess, assume the second exponential is zero
+	A, Gamma, B = guess_exp(x,y)
+	return [A, Gamma, 0, 0, B]
+
+def bounds_biexp(x,y):
+	lb = [0, 0, 0, 0, -inf]
+	ub = [inf, inf, inf, inf, inf]
+	return lb,ub
+
+biexp = types.SimpleNamespace()
+biexp.f = func_biexp
+biexp.guess = guess_biexp
+biexp.string = 'A1*exp(-x*Gamma1)+A2*exp(-x*Gamma2) + B'
+biexp.bounds = bounds_biexp
 
 ###########################################
 # exponential decay convolved  with gaussian response
@@ -467,4 +537,27 @@ logpulse.string = 'A/((1+exp(-(x-x0)k0))(1+exp(-(x+x0)k0)) + B'
 logpulse.bounds = bounds_logpulse
 
 
+###########################################
+# Dual gaussian
+###########################################
 
+def func_dualgaussian(x, A1, x1, s1, A2, x2, s2, B):
+	"""Gaussian + B"""
+	return A1 * np.exp(-(x-x1)**2/(2*s1**2)) + A2 * np.exp(-(x-x2)**2/(2*s2**2)) + B
+
+def guess_dualgaussian(x, y):
+	A1, x1, FWHM1, A2, x2, FWHM2, B = find_2peaks(x,y)
+	return [A1, x1, FWHM1/2.35, A2, x2, FWHM2/2.35, B]  # convert FWHM to standard deviation
+
+def bounds_dualgaussian(x, y):
+	# assume peak to be withing x data, define sigma to be positive
+	lb = [-inf, np.min(x), 0, -inf, np.min(x), 0, -inf]
+	ub = [inf, np.max(x), inf, inf, np.max(x), inf, inf]
+	return lb, ub
+
+
+dualgaussian = types.SimpleNamespace()
+dualgaussian.f = func_dualgaussian
+dualgaussian.guess = guess_dualgaussian
+dualgaussian.string = 'A1*Norm(x;x1,s1)+A2*Norm(x;x2,s2)+B'
+dualgaussian.bounds = bounds_dualgaussian
