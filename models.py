@@ -4,6 +4,7 @@ import lazyfit.utility as utility
 import types
 
 import scipy.special
+import scipy.signal
 
 pi = np.pi
 
