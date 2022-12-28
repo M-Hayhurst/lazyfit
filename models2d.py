@@ -17,7 +17,7 @@ def func_gaussian2d(x, y, A, x0, y0, sx, sy, p, B):
 	"""Bivariate gaussian plus background
 	Parameters:
 	x	1D array of x values
-	y	2D array of y values
+	y	1D array of y values
 	A	amplitude
 	x0 	mean in x
 	y0 	mean in y
@@ -27,7 +27,7 @@ def func_gaussian2d(x, y, A, x0, y0, sx, sy, p, B):
 	B	background"""
 
 	cov = np.array([[sx**2, sx*sy*p],[sx*sy*p, sy**2]]) # covariance matrix
-	xy = np.array([x.ravel(),y.ravel()]).transpose()
+	xy = np.array([x.ravel(),y.ravel()])
 
 	res =  A * scipy.stats.multivariate_normal.pdf(xy, mean=[x0,y0], cov=cov)/scipy.stats.multivariate_normal.pdf((0,0), mean=[0,0], cov=cov) + B
 	return np.resize(res, x.shape) # imitate size of x

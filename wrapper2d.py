@@ -9,23 +9,29 @@ import inspect
 
 
 def fit2d(fittype, x, y, z, dz=None, guess=None, bounds=None, fix={}, verbose=False, options={}):
-    """Provides a short cut to creating a Wrapper object and calling fit()"""
+    """Shortcut to creating a Wrapper2d object and calling fit()"""
     f = Wrapper2d(fittype, x, y, z, dz, guess, bounds, fix, verbose)
     f.fit(options)
     return f
 
 
 class Wrapper2d:
+    '''Wrapper class for fitting 2-dimensional data.
+    Contains the x, y and z data and provides methods to fitting and plotting.
+    '''
+
     def __init__(self, fittype, x, y, z, dz=None, guess=None, bounds=None, fix={}, verbose=False):
+
+        # check dimensions of input data
+        if x.size != z.shape[0] or y.size != z.shape[1]:
+            raise Exception(f'Dimensions of data to not match. Wrapper got x {x.shape}, y {y.shape}, z {z.shape}. z dimensions should be (x-len, y-len)')
 
         self.fittype = fittype
         self.verbose = verbose
         self.fix = fix
-
-        # clean data
         self.x, self.y, self.z, = x, y, z
 
-        # errors
+        # assign errors
         if dz is None:
             self.has_dz = False
         else:
@@ -42,11 +48,11 @@ class Wrapper2d:
         except AttributeError:
             raise Exception(f'No fit model named "{fittype}"')
 
-        # extrac stuff from fit model
-        self.f = self.model.f
+        # extrac information from fit model
+        self.f = self.model.f # function handle
         self.fitvars = inspect.getargspec(self.f).args[
                        2::]  # get fit function arguments but without 'x' and 'y' which are always the first two arguments
-        self.n_DOF = self.z.size - len(self.fitvars)
+        self.n_DOF = self.z.size - len(self.fitvars) # degrees of freedom
 
         # generate guess
         if guess is None:
@@ -68,22 +74,28 @@ class Wrapper2d:
             # find the index of the key in the fitting params
             ind = self.fitvars.index(key)
 
-            # go to this index, fix bounds and guess to the value
+            # go to this index, fix bounds and guess to the value.
+            # add epsilon (a small number) to bounds in case val=0 such that the upper and lower bounds are different
             self.bounds[0][ind] = val * 0.999999 - utility.EPSILON
             self.bounds[1][ind] = val * 1.000001 + utility.EPSILON
             self.guess[ind] = val
 
     def f_wrapper(self, *args):
         '''Wrapper for the fitting function. Does two things:
-        1) unwraps the first argument into x and y vabibles
+        1) unwraps the first argument into x and y variables
         2) returns a linearised output'''
 
         x, y = args[0] # unwrap first two arguments
-        return self.f(x,y, *args[1::]).ravel()
+        return self.f(x, y, *args[1::]).ravel()
 
     def fit(self, options={}):
+        '''fit the data contained in the wrapper with the provided fit model.
+        Best fit parameters are saved in self.params and self.params_dict.
+        Fit errors are saved in self.errors and self.errors_dict
+        The covariance matrix is saved in self.COVB'''
+
         # create mesh grid versions of x and y, see eg. https://stackoverflow.com/questions/21566379/fitting-a-2d-gaussian-function-using-scipy-optimize-curve-fit-valueerror-and-m
-        x_mesh, y_mesh = np.meshgrid(self.x, self.y)
+        x_mesh, y_mesh = np.meshgrid(self.y, self.x)
 
         # do the actual fit
         self.fit_res = scipy.optimize.curve_fit(self.f_wrapper, (x_mesh, y_mesh), self.z.ravel(), self.guess, bounds=self.bounds, **options)
@@ -100,15 +112,22 @@ class Wrapper2d:
             self.errors_dict[var] = self.errors[i]
 
     def predict(self, x, y):
-        x_mesh, y_mesh = np.meshgrid(x, y)
+        '''Call the fit model using the supplied x and y values and the fitted model parameters'''
+        return self.f(x_mesh, y_mesh, *self.params)
+
+    def predict_mesh(self, x, y):
+        '''Call the fit model using the supplied x and y values and the fitted movel paramters. Create a mesh from the 1D x and y data so that a 2d matrix is returned '''
+        x_mesh, y_mesh = np.meshgrid(y, x)
         return self.f(x_mesh, y_mesh, *self.params)
 
     def get_guess(self, x, y):
-        x_mesh, y_mesh = np.meshgrid(x, y)
+        '''using the guess paramters and 1d arrays of x and y values, return a 2d matrix of results from the fit model using the initial guess'''
+        x_mesh, y_mesh = np.meshgrid(y, x)
         return self.f(x_mesh, y_mesh, *self.guess)
 
     def get_chi2(self):
-        return np.sum((self.z - self.predict(self.x, self.y)) ** 2 / self.dz ** 2)
+        '''Return the Pearson chi2 value'''
+        return np.sum((self.z - self.predict_mesh(self.x, self.y)) ** 2 / self.dz ** 2)
 
     def get_pval(self):
         '''Return probability of null hypothesis given chisquared sum, and degrees of freedom.
