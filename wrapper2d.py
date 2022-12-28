@@ -14,8 +14,6 @@ def fit2d(fittype, x, y, z, dz=None, guess=None, bounds=None, fix={}, verbose=Fa
     f.fit(options)
     return f
 
-epsilon = 1E-20
-
 
 class Wrapper2d:
     def __init__(self, fittype, x, y, z, dz=None, guess=None, bounds=None, fix={}, verbose=False):
@@ -71,8 +69,8 @@ class Wrapper2d:
             ind = self.fitvars.index(key)
 
             # go to this index, fix bounds and guess to the value
-            self.bounds[0][ind] = val * 0.999999 - epsilon
-            self.bounds[1][ind] = val * 1.000001 + epsilon
+            self.bounds[0][ind] = val * 0.999999 - utility.EPSILON
+            self.bounds[1][ind] = val * 1.000001 + utility.EPSILON
             self.guess[ind] = val
 
     def f_wrapper(self, *args):

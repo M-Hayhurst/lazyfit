@@ -2,6 +2,7 @@ from scipy.fft import fft, fftfreq
 import numpy as np
 import math as m
 
+EPSILON = 1E-20 # tiny offset applied to fit limits when fixing a paramter
 
 def format_error(y, dy, version=1):
 	"""return a nice string representation of a number and its error"""
