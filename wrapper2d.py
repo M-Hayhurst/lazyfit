@@ -105,6 +105,10 @@ class Wrapper2d:
         x_mesh, y_mesh = np.meshgrid(x, y)
         return self.f(x_mesh, y_mesh, *self.params)
 
+    def get_guess(self, x, y):
+        x_mesh, y_mesh = np.meshgrid(x, y)
+        return self.f(x_mesh, y_mesh, *self.guess)
+
     def get_chi2(self):
         return np.sum((self.z - self.predict(self.x, self.y)) ** 2 / self.dz ** 2)
 
@@ -113,38 +117,53 @@ class Wrapper2d:
         Only works if you supplied errors to the fitting routine'''
         return scipy.stats.distributions.chi2.sf(self.get_chi2(), self.n_DOF)
 
-    def plot(self, N=200, print_params=True, plot_guess=False, logz=False, plot_residuals=True, figsize=(12,5), fmt='o'):
+    def plot(self, print_params=True, plot_guess=False, logz=False, plot_residuals=True, figsize=(12,5), fmt='o'):
 
         # this is harder for 2D, the strategy is to crete 3 windows:
         # 1) data
         # 2) fit
         # 3) difference, ie. error
+        # 4) guess (optional)
 
         fig = plt.figure(figsize=figsize)
 
-        if plot_residuals:
-            subplot_size = (1, 3)
-        else:
-            subplot_size = (1,2)
+        subplot_size = (1, 2+int(plot_residuals)+int(plot_guess))
+        i_subplot = 0
+        axes = []
 
         # plot data
-        ax1 = plt.subplot2grid(subplot_size, (0, 0))
+        axes.append(plt.subplot2grid(subplot_size, (0, i_subplot)))
         plt.pcolormesh(self.x, self.y, self.z)
         plt.title('Data')
         plt.colorbar()
+        i_subplot += 1
+
+        # Fit guess
+        if plot_guess:
+            axes.append(plt.subplot2grid(subplot_size, (0, i_subplot)))
+            plt.pcolormesh(self.x, self.y, self.get_guess(self.x, self.y))
+            plt.title('Fit guess')
+            plt.colorbar()
+            i_subplot += 1
 
         #plot fit
-        ax2 = plt.subplot2grid(subplot_size, (0, 1))
+        axes.append(plt.subplot2grid(subplot_size, (0, i_subplot)))
         plt.pcolormesh(self.x, self.y, self.predict(self.x, self.y))
         plt.title('Fit')
         plt.colorbar()
+        i_subplot += 1
 
         # Difference
         if plot_residuals:
-            ax3 = plt.subplot2grid(subplot_size, (0, 2))
+            axes.append(plt.subplot2grid(subplot_size, (0, i_subplot)))
             plt.pcolormesh(self.x, self.y,  self.z-self.predict(self.x, self.y), cmap='seismic')
-            plt.title('Data-Fit')
+            plt.title('Data - Fit')
             plt.colorbar()
+            i_subplot += 1
+
+
+
+        # guess
 
         # print list of fitting parameters
         if print_params:
@@ -178,7 +197,7 @@ class Wrapper2d:
                 summary += '\np = %2.4f' % self.get_pval()
 
             y_cord = 1
-            plt.text(1.4, y_cord, summary, transform=ax3.transAxes, horizontalalignment='left', fontfamily='monospace',
+            plt.text(1.4, y_cord, summary, transform=axes[-1].transAxes, horizontalalignment='left', fontfamily='monospace',
                      verticalalignment='top')
 
         # return fig handle
@@ -187,13 +206,8 @@ class Wrapper2d:
     def plot_guess(self, N=200):
 
         fig = plt.figure()
-
-        if self.has_dy:
-            plt.errorbar(self.x, self.y, self.dy, fmt='o', label='Data')
-        else:
-            plt.plot(self.x, self.y, 'o', label='Data')
-
-        xdummy = np.linspace(np.min(self.x), np.max(self.x), N)
-        plt.plot(xdummy, self.f(xdummy, *self.guess), label='Guess')
+        plt.pcolormesh(self.x, self.y, self.get_guess(self.x, self.y))
+        plt.title('Fit guess')
+        plt.colorbar()
 
         return fig
