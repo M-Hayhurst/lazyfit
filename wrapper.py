@@ -6,7 +6,7 @@ import scipy.optimize
 import scipy.stats
 import lazyfit.utility as utility
 import inspect
-
+import types
 
 def fit(fittype, x, y, dy=None, guess=None, bounds=None, fix={}, verbose=False, options={}):
     """Provides a short cut to creating a Wrapper object and calling fit()"""
@@ -26,6 +26,11 @@ class Wrapper:
         self.verbose = verbose
         self.fix = fix
 
+        # check dimensions of input data
+        if x.size != y.size:
+            raise Exception(
+                f'Dimensions of data to not match. Wrapper got x {x.shape}, y {y.shape}. x and y must have same length')
+
         # clean data
         self.x, self.y, n_bad = utility.clean_data(x, y)
         if n_bad > 0:
@@ -43,10 +48,15 @@ class Wrapper:
             self.has_dy = True
 
         # find fit model
-        try:
-            self.model = getattr(models, fittype)
-        except AttributeError:
-            raise Exception(f'No fit model named "{fittype}"')
+        if type(fittype) is types.SimpleNamespace: # a fitmodel saved in a simplenamespace was passed
+            self.model = fittype
+        elif type(fittype) is str:
+            try:
+                self.model = getattr(models, fittype)
+            except AttributeError:
+                raise Exception(f'No fit model named "{fittype}"')
+        else:
+            raise Exception('Invalid fit model. Must either be a SimpleNamespace or a string referring to a built-in model.')
 
         # extrac stuff from fit model
         self.f = self.model.f
@@ -153,7 +163,10 @@ class Wrapper:
         # print list of fitting parameters
         if print_params:
             # print model name
-            summary = f'Model: {self.fittype}\n'
+            if self.fittype is str:
+                summary = f'Model: {self.fittype}\n'
+            else:
+                summary = f'Model: Custom\n'
 
             # print the math expression, either with plain text or latex
             # if hasattr(self.model, 'tex'):
