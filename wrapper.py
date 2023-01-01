@@ -163,7 +163,7 @@ class Wrapper:
         # print list of fitting parameters
         if print_params:
             # print model name
-            if self.fittype is str:
+            if type(self.fittype) is str:
                 summary = f'Model: {self.fittype}\n'
             else:
                 summary = f'Model: Custom\n'
