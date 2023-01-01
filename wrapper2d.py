@@ -9,23 +9,31 @@ import inspect
 
 
 def fit2d(fittype, x, y, z, dz=None, guess=None, bounds=None, fix={}, verbose=False, options={}):
-    """Provides a short cut to creating a Wrapper object and calling fit()"""
+    """Shortcut to creating a Wrapper2d object and calling fit()"""
     f = Wrapper2d(fittype, x, y, z, dz, guess, bounds, fix, verbose)
     f.fit(options)
     return f
 
 
 class Wrapper2d:
+    """Wrapper class for fitting 2-dimensional data.
+      Contains the x, y and z data and provides methods to fitting and plotting.
+      """
+
     def __init__(self, fittype, x, y, z, dz=None, guess=None, bounds=None, fix={}, verbose=False):
 
         self.fittype = fittype
         self.verbose = verbose
         self.fix = fix
 
-        # clean data
+        # check dimensions of input data
+        if x.size != z.shape[1] or y.size != z.shape[0]:
+            raise Exception(
+                f'Dimensions of data to not match. Wrapper got x {x.shape}, y {y.shape}, z {z.shape}. z dimensions should be (y-len, x-len)')
+
         self.x, self.y, self.z, = x, y, z
 
-        # errors
+        # assign errors
         if dz is None:
             self.has_dz = False
         else:
@@ -42,7 +50,7 @@ class Wrapper2d:
         except AttributeError:
             raise Exception(f'No fit model named "{fittype}"')
 
-        # extrac stuff from fit model
+        # extract properties from fit model
         self.f = self.model.f
         self.fitvars = inspect.getargspec(self.f).args[
                        2::]  # get fit function arguments but without 'x' and 'y' which are always the first two arguments
@@ -64,6 +72,7 @@ class Wrapper2d:
             self.bounds = bounds
 
         # fix varibles if neceassary
+        # add epsilon (a small number) to bounds in case val=0 such that the upper and lower bounds are different
         for key, val in fix.items():
             # find the index of the key in the fitting params
             ind = self.fitvars.index(key)
@@ -74,14 +83,19 @@ class Wrapper2d:
             self.guess[ind] = val
 
     def f_wrapper(self, *args):
-        '''Wrapper for the fitting function. Does two things:
-        1) unwraps the first argument into x and y vabibles
-        2) returns a linearised output'''
+        """Wrapper for the fitting function. Does two things:
+        1) unwraps the first argument into x and y variables 
+        2) returns a linearised output"""
 
         x, y = args[0] # unwrap first two arguments
         return self.f(x,y, *args[1::]).ravel()
 
     def fit(self, options={}):
+        """fit the data contained in the wrapper with the provided fit model.
+            Best fit parameters are saved in self.params and self.params_dict.
+            Fit errors are saved in self.errors and self.errors_dict
+            The covariance matrix is saved in self.COVB"""
+        
         # create mesh grid versions of x and y, see eg. https://stackoverflow.com/questions/21566379/fitting-a-2d-gaussian-function-using-scipy-optimize-curve-fit-valueerror-and-m
         x_mesh, y_mesh = np.meshgrid(self.x, self.y)
 
@@ -99,20 +113,26 @@ class Wrapper2d:
             self.params_dict[var] = self.params[i]
             self.errors_dict[var] = self.errors[i]
 
-    def predict(self, x, y):
-        x_mesh, y_mesh = np.meshgrid(x, y)
-        return self.f(x_mesh, y_mesh, *self.params)
+    def predict(self, x, y, params=None):
+        """return values of fit model based on input x and y parameters.
+        x and y can be either 1D or 2D data.
+        If params is none, the fitted parameters are used"""
+        if params is None:
+            params = self.params
+        return self.f(x, y, *params)
 
-    def get_guess(self, x, y):
+    def predict_mesh(self, x, y, params=None):
+        """Takes 1d lists of x and y values, generates a mesh grid, and returns a 2D matrix of model values using the fitted model paramters"""
         x_mesh, y_mesh = np.meshgrid(x, y)
-        return self.f(x_mesh, y_mesh, *self.guess)
+        return self.predict(x_mesh, y_mesh, params)
 
     def get_chi2(self):
-        return np.sum((self.z - self.predict(self.x, self.y)) ** 2 / self.dz ** 2)
+        """Calculate and return the Pearson chi2 value"""
+        return np.sum((self.z - self.predict_mesh(self.x, self.y)) ** 2 / self.dz ** 2)
 
     def get_pval(self):
-        '''Return probability of null hypothesis given chisquared sum, and degrees of freedom.
-        Only works if you supplied errors to the fitting routine'''
+        """Return probability of null hypothesis given chisquared sum, and degrees of freedom.
+        Only works if you supplied errors to the fitting routine"""
         return scipy.stats.distributions.chi2.sf(self.get_chi2(), self.n_DOF)
 
     def plot(self, print_params=True, plot_guess=False, logz=False, plot_residuals=True, figsize=(12,5), fmt='o'):
@@ -139,14 +159,14 @@ class Wrapper2d:
         # Fit guess
         if plot_guess:
             axes.append(plt.subplot2grid(subplot_size, (0, i_subplot)))
-            plt.pcolormesh(self.x, self.y, self.get_guess(self.x, self.y))
+            plt.pcolormesh(self.x, self.y, self.predict_mesh(self.x, self.y, self.guess))
             plt.title('Fit guess')
             plt.colorbar()
             i_subplot += 1
 
         #plot fit
         axes.append(plt.subplot2grid(subplot_size, (0, i_subplot)))
-        plt.pcolormesh(self.x, self.y, self.predict(self.x, self.y))
+        plt.pcolormesh(self.x, self.y, self.predict_mesh(self.x, self.y))
         plt.title('Fit')
         plt.colorbar()
         i_subplot += 1
@@ -154,24 +174,15 @@ class Wrapper2d:
         # Difference
         if plot_residuals:
             axes.append(plt.subplot2grid(subplot_size, (0, i_subplot)))
-            plt.pcolormesh(self.x, self.y,  self.z-self.predict(self.x, self.y), cmap='seismic')
+            plt.pcolormesh(self.x, self.y,  self.z-self.predict_mesh(self.x, self.y), cmap='seismic')
             plt.title('Data - Fit')
             plt.colorbar()
             i_subplot += 1
 
-
-
-        # guess
-
         # print list of fitting parameters
         if print_params:
-            # print model name
+            # print model name and mathematical string
             summary = f'Model: {self.fittype}\n'
-
-            # print the math expression, either with plain text or latex
-            # if hasattr(self.model, 'tex'):
-            #	summary += self.model.tex +'\n'
-            # else:
             summary += self.model.string + '\n'
 
             # print fit paramters
@@ -194,17 +205,16 @@ class Wrapper2d:
                 summary += '\nchi2red = %2.4f' % (chi2 / self.n_DOF)
                 summary += '\np = %2.4f' % self.get_pval()
 
-            y_cord = 1
-            plt.text(1.4, y_cord, summary, transform=axes[-1].transAxes, horizontalalignment='left', fontfamily='monospace',
+            plt.text(1.4, 1, summary, transform=axes[-1].transAxes, horizontalalignment='left', fontfamily='monospace',
                      verticalalignment='top')
 
         # return fig handle
         return fig
 
-    def plot_guess(self, N=200):
-
+    def plot_guess(self):
+        """plot the model guess"""
         fig = plt.figure()
-        plt.pcolormesh(self.x, self.y, self.get_guess(self.x, self.y))
+        plt.pcolormesh(self.x, self.y, self.predict_mesh(self.x, self.y, self.guess))
         plt.title('Fit guess')
         plt.colorbar()
 

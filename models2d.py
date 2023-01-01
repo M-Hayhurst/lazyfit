@@ -17,7 +17,7 @@ def func_gaussian2d(x, y, A, x0, y0, sx, sy, p, B):
 	"""Bivariate gaussian plus background
 	Parameters:
 	x	1D array of x values
-	y	2D array of y values
+	y	1D array of y values
 	A	amplitude
 	x0 	mean in x
 	y0 	mean in y
