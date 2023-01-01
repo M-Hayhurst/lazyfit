@@ -11,7 +11,11 @@ import inspect
 def fit(fittype, x, y, dy=None, guess=None, bounds=None, fix={}, verbose=False, options={}):
     """Provides a short cut to creating a Wrapper object and calling fit()"""
     f = Wrapper(fittype, x, y, dy, guess, bounds, fix, verbose)
-    f.fit(options)
+    try:
+        f.fit(options)
+    except Exception as e:
+        print('Could not perform fit. Try plotting the data and fit guess with .plot_guess(). Stack trace:')
+        raise e
     return f
 
 
@@ -101,7 +105,8 @@ class Wrapper:
         Only works if you supplied errors to the fitting routine'''
         return scipy.stats.distributions.chi2.sf(self.get_chi2(), self.n_DOF)
 
-    def plot(self, N=200, print_params=True, plot_guess=False, logy=False, plot_residuals=False, figsize=None, fmt='o'):
+    def plot(self, N=200, print_params=True, plot_guess=False, logy=False, plot_residuals=False, figsize=None, fmt='o',
+             xlabel='', ylabel=''):
 
         fig = plt.figure(figsize=figsize)
 
@@ -124,8 +129,11 @@ class Wrapper:
         if logy:
             ax1.set_yscale('log')
 
-        # make legend
+        # make legend and axes
         ax1.legend(loc='upper left', bbox_to_anchor=(1, 1), frameon=False)
+        plt.ylabel(ylabel)
+        if not plot_residuals:
+            plt.xlabel(xlabel)
 
         # plot residuals in subplot
         if plot_residuals:
@@ -137,6 +145,7 @@ class Wrapper:
 
             plt.ylabel('Residual')
             plt.grid(axis='y')
+            plt.xlabel(xlabel)
 
             # get rid of the tick labels on the top xaxis
             plt.setp(ax1.get_xticklabels(), visible=False)
