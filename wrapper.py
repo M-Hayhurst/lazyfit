@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import scipy.optimize
 import scipy.stats
 import lazyfit.utility as utility
-import inspect
 import types
 
 def fit(fittype, x, y, dy=None, guess=None, bounds=None, fix={}, verbose=False, options={}):
@@ -48,7 +47,7 @@ class Wrapper:
             self.has_dy = True
 
         # find fit model
-        if type(fittype) is types.SimpleNamespace: # a fitmodel saved in a simplenamespace was passed
+        if type(fittype) is models.LazyFitModel: # a fitmodel saved in a simplenamespace was passed
             self.model = fittype
         elif type(fittype) is str:
             try:
@@ -60,8 +59,7 @@ class Wrapper:
 
         # extrac stuff from fit model
         self.f = self.model.f
-        self.fitvars = inspect.getargspec(self.f).args[
-                       1::]  # get fit function arguments but without 'x' which is always first argument
+        self.fitvars = self.model.get_param_names()
         self.n_DOF = len(self.x) - len(self.fitvars)
 
         # generate guess
@@ -163,16 +161,11 @@ class Wrapper:
         # print list of fitting parameters
         if print_params:
             # print model name
-            if type(self.fittype) is str:
-                summary = f'Model: {self.fittype}\n'
-            else:
-                summary = f'Model: Custom\n'
+            summary = f'Model: {self.model.name}\n'
 
-            # print the math expression, either with plain text or latex
-            # if hasattr(self.model, 'tex'):
-            #	summary += self.model.tex +'\n'
-            # else:
-            summary += self.model.string + '\n'
+            #print the math expression
+            if hasattr(self.model, 'string'):
+                summary += self.model.string + '\n'
 
             # print fit paramters
             ljust_len = max([len(s) for s in self.fitvars])  # find the longs fit variable name
