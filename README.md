@@ -4,7 +4,7 @@ This allows fitting, plotting and statistical tests to be performed from a singl
 
 For mundane fitting tasks, Lazyfit can yield a fit and plot with just two lines of code:
 
-![Alt text](screenshots/Sine_example.png?raw=true "Title")
+![Alt text](screenshots/Sine_example.PNG?raw=true "Title")
 
 Lazyfit contains a library of common fit models encountered in the physical sciences. 
 These models automatically estimate good starting points and bounds for the fit parameters, thus eliminating manual estimation.
