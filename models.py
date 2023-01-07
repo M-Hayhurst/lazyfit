@@ -15,6 +15,7 @@ inf = float('inf')
 ###########################################
 
 class LazyFitModel:
+	'''Class for containg fitmodels. '''
 
 	def __init__(self, name, f, guess=None, bounds=None, math_string=None, description=None ):
 		self.name = name # string containing model name
@@ -306,7 +307,7 @@ def _bounds_ramsey(x, y):
 	up = [inf, inf, 2*pi, inf, inf, inf]
 	return (lb,up)
 
-ramsey = LazyFitModel('ramsey', _func_ramsey, _guess_ramsey, _bounds_ramsey, 'A*np.sin(x*f*2*pi+phi)*np.exp(-(x/T2s)**alpha)+B')
+ramsey = LazyFitModel('ramsey', _func_ramsey, _guess_ramsey, _bounds_ramsey, 'A*sin(x*f*2pi+phi)*exp(-(x/T2s)^alpha)+B')
 
 ###########################################
 # two level saturation
