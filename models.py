@@ -62,42 +62,24 @@ def peak_finder(x, y):
 
 
 def find_2peaks(x, y):
-	'''return x,y coordinates'''
-	distance = 0.9 * len(x)
+	'''roughly estimates the properties of the two most prominent peaks in the (x,y) data
+	Returns a tupple with [A1, x1, FWHM1, A2, x2, FWHM2, B]
+	A1 is amplitude of first peak
+	x1 is position of first peak
+	FWHM is full width half maximum of first peak
+	Next 3 parameters are the same but for the second peak
+	B is a constant background
+	'''
 
-	while True:
-		if distance < 1:  # we will never find two peaks
-			indices = [0, len(x) - 1]
-			break
-		indices = scipy.signal.find_peaks(y, width=5, distance=distance, prominence=10)[0]
-		if len(indices) == 2:  # correct number of peaks
-			break
-		elif len(indices) > 2:  # we for some reason got too many peaks, return the outer ones
-			indices = [indices[0], indices[-1]]
-			break
+	# first detect the largest peak
+	A1, x1, FWHM1, B1 = peak_finder(x,y)
 
-		else:
-			distance *= 0.6
+	# subtract a gaussian resembling the first peak
+	y2 = y - _func_gaussian(x, A1, x1, FWHM1/2.35, 0)
 
-	B = np.min(y)  # background estimate
-	A1, A2 = y[indices[0]] - B, y[indices[1]] - B  # peak amplitude
-	x1, x2 = x[indices[0]], x[indices[1]]
-
-	# fist peak, look at left side
-	filter_under_half = (y - B) < A1 / 2  # filter where background corrected signal is below 50% of peak
-	try:
-		FWHM1 = 2*np.abs(x[np.max(np.argwhere(filter_under_half * (x < x1)))]-x1)
-	except ValueError:
-		FWHM1 = 0
-
-	# second peak, look at right side
-	filter_under_half = (y - B) < A2 / 2  # filter where background corrected signal is below 50% of peak
-	try:
-		FWHM2 = 2*np.abs(x2-x[np.min(np.argwhere(filter_under_half * (x > x2)))])
-	except ValueError:
-		FWHM2 = 0
-
-	return  [A1, x1, FWHM1, A2, x2, FWHM2, B]
+	# find the second peak
+	A2, x2, FWHM2, B2 = peak_finder(x, y2)
+	return  [A1, x1, FWHM1, A2, x2, FWHM2, B1]
 
 ###########################################
 # lorentzian peak
