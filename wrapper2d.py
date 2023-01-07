@@ -45,10 +45,16 @@ class Wrapper2d:
             self.has_dz = True
 
         # find fit model
-        try:
-            self.model = getattr(models2d, fittype)
-        except AttributeError:
-            raise Exception(f'No fit model named "{fittype}"')
+        if type(fittype) is models2d.LazyFitModel2d:  # a fitmodel saved in a simplenamespace was passed
+            self.model = fittype
+        elif type(fittype) is str:
+            try:
+                self.model = getattr(models2d, fittype)
+            except AttributeError:
+                raise Exception(f'No fit model named "{fittype}"')
+        else:
+            raise Exception(
+                'Invalid fit model. Must either be a SimpleNamespace or a string referring to a built-in model.')
 
         # extract properties from fit model
         self.f = self.model.f
@@ -135,7 +141,7 @@ class Wrapper2d:
         Only works if you supplied errors to the fitting routine"""
         return scipy.stats.distributions.chi2.sf(self.get_chi2(), self.n_DOF)
 
-    def plot(self, print_params=True, plot_guess=False, logz=False, plot_residuals=True, figsize=(12,5), fmt='o'):
+    def plot(self, print_params=True, plot_guess=False, logz=False, plot_residuals=True, figsize=(12,5), fmt='o', shading='nearest'):
 
         # this is harder for 2D, the strategy is to crete 3 windows:
         # 1) data
@@ -151,7 +157,7 @@ class Wrapper2d:
 
         # plot data
         axes.append(plt.subplot2grid(subplot_size, (0, i_subplot)))
-        plt.pcolormesh(self.x, self.y, self.z)
+        plt.pcolormesh(self.x, self.y, self.z, shading=shading)
         plt.title('Data')
         plt.colorbar()
         i_subplot += 1
@@ -159,14 +165,14 @@ class Wrapper2d:
         # Fit guess
         if plot_guess:
             axes.append(plt.subplot2grid(subplot_size, (0, i_subplot)))
-            plt.pcolormesh(self.x, self.y, self.predict_mesh(self.x, self.y, self.guess))
+            plt.pcolormesh(self.x, self.y, self.predict_mesh(self.x, self.y, self.guess), shading=shading)
             plt.title('Fit guess')
             plt.colorbar()
             i_subplot += 1
 
         #plot fit
         axes.append(plt.subplot2grid(subplot_size, (0, i_subplot)))
-        plt.pcolormesh(self.x, self.y, self.predict_mesh(self.x, self.y))
+        plt.pcolormesh(self.x, self.y, self.predict_mesh(self.x, self.y), shading=shading)
         plt.title('Fit')
         plt.colorbar()
         i_subplot += 1
@@ -174,7 +180,7 @@ class Wrapper2d:
         # Difference
         if plot_residuals:
             axes.append(plt.subplot2grid(subplot_size, (0, i_subplot)))
-            plt.pcolormesh(self.x, self.y,  self.z-self.predict_mesh(self.x, self.y), cmap='seismic')
+            plt.pcolormesh(self.x, self.y,  self.z-self.predict_mesh(self.x, self.y), cmap='seismic', shading=shading)
             plt.title('Data - Fit')
             plt.colorbar()
             i_subplot += 1
