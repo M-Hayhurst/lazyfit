@@ -6,6 +6,7 @@ import types
 import scipy.special
 import scipy.signal
 import inspect
+#import matplotlib.pyplot as plt
 
 pi = np.pi
 inf = float('inf')
@@ -76,9 +77,19 @@ def find_2peaks(x, y):
 
 	# subtract a gaussian resembling the first peak
 	y2 = y - _func_gaussian(x, A1, x1, FWHM1/2.35, 0)
+	y2 = np.maximum(y2, B1) # prevent the new data from going below the previous minimum
+
+	# debugging
+	#plt.figure()
+	#plt.plot(x, y, label='data')
+	#plt.plot(x, _func_gaussian(x, A1, x1, FWHM1/2.35, 0), label='gauss')
+	#plt.plot(x, y2, label='data-gauss')
+	#plt.legend()
 
 	# find the second peak
 	A2, x2, FWHM2, B2 = peak_finder(x, y2)
+	if FWHM2 == 0: # this sometimes happens if we cant find a FWHM
+		FWHM2 = FWHM1
 	return  [A1, x1, FWHM1, A2, x2, FWHM2, B1]
 
 ###########################################
