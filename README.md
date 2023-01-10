@@ -25,6 +25,10 @@ Lazyfit is documented in a number of Jupyter notebooks.
 - Multiple keyword-based plotting features including residual plotting and logarithmic axes.
 - Fit wrapper for 2d data
 
+# Installation
+This project does not have an official release yet. For now, either clone the project or download it using the Code->Download Zip button on the Github page.
+Copy the "Lazyfit-main" folder to the "/site-packages" folder of your Python installation and rename "Lazyfit-main" to "lazyfit".
+
 # Development notes
 This project is heavily tailored towards my own fitting needs encountered as a physicist working within experimental quantum optics.
 For this reason, the model library probably omits many fit models which are essential to other disciplines.
