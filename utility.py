@@ -84,3 +84,16 @@ def FWHM_to_sigma(s):
 	'''the inverse of sigma_to_FWHM()'''
 	return s/2.3548200450309493  # 2*sqrt(2*log(2))
 
+def get_logistic_risetime(k, ylow=0.1, yhigh=0.9):
+	'''get the risetime of a logistic function.
+
+	Args:
+		k		logistic rate, eg. estimated by the logistic or logpulse fitmodels
+		ylow	low value of normalised logistic where we start measuring the rise, defaults to 0.1
+		yhigh	high value of normalised logistic where we stop measuring the rise, defaults to 0.9
+
+	If the optional paramters ylow and yhigh are not specified, the function will return the 10-90 rise time.
+	'''
+
+	return (1/k)* (np.log(1/ylow-1) - np.log(1/yhigh-1)) # see https://condellpark.com/kd/sars_files/LogisticRisetime.pdf for deviration, or do it yourself. It is a nice problem.
+
