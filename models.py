@@ -303,6 +303,41 @@ def _bounds_ramsey(x, y):
 ramsey = LazyFitModel('ramsey', _func_ramsey, _guess_ramsey, _bounds_ramsey, 'A*sin(x*f*2pi+phi)*exp(-(x/T2s)^alpha)+B')
 
 ###########################################
+# Ramsey envelope
+###########################################
+
+def _func_ramseyenvelope(x, A, T2s, alpha):
+	"""Decaying ramsey Envelope
+	A**np.exp(-(x/T2s)**alpha)
+
+	Parameters:
+	x		xdata
+	A 		amplitude for x=0, this is initial visibility
+	T2s		1/e time of decay envelope (T2* time)
+	alpha	exponential exponent of decay envelope
+	"""
+	return A*np.exp(-(x/T2s)**alpha)
+
+def _guess_ramseyenvelope(x,y):
+
+	# assume alpha = 1, use exponential guess
+	A, gamma, B = _guess_exp(x,y)
+	if gamma>0:
+		T2s = 1/gamma
+	else:
+		T2s = np.mean(x)
+	alpha = 1
+
+	return [A, T2s, alpha]
+
+def _bounds_ramseyenvelope(x, y):
+	lb = [0, 0, 0]
+	up = [inf, inf, inf]
+	return (lb,up)
+
+ramseyenvelope = LazyFitModel('ramseyenvelope', _func_ramseyenvelope, _guess_ramseyenvelope, _bounds_ramseyenvelope, 'A*exp(-(x/T2s)^alpha)')
+
+###########################################
 # two level saturation
 ###########################################
 
