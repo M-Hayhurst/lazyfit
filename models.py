@@ -28,7 +28,7 @@ class LazyFitModel:
 
 	def get_param_names(self):
 		'''return dictionary with names of fit parameters'''
-		return inspect.getargspec(self.f).args[1::]  # get fit function arguments but without 'x' which is always first argument
+		return inspect.getfullargspec(self.f).args[1::]  # get fit function arguments but without 'x' which is always first argument
 
 	def __repr__(self):
 		'''show some usefull information when printing the model object in the terminal'''
@@ -235,6 +235,36 @@ def _bounds_convexp(x,y):
 	return lb,ub
 
 convexp = LazyFitModel('conexp', _func_convexp, _guess_convexp, _bounds_convexp, 'A*exp(-x*Gamma) conv N(x;0,s) + B')
+
+
+###########################################
+# T1
+###########################################
+
+def _func_T1(x, A, T1, B):
+	"""Single exponential decay plus constant background
+	A*(1-np.exp(-x/T1)) + B
+
+	Parameters:
+	x		xdata
+	A		amplitude
+	T1		T1 correlation time
+	B		constant background
+	"""
+	return A*(1-np.exp(-x/T1)) + B
+
+def _guess_T1(x,y):
+
+	[_, Gamma, _] = _guess_exp(x,-y)
+
+	return [np.max(y), 1/Gamma, np.min(y)] # TODO, can be more accurate
+
+def _bounds_T1(x,y):
+	lb = [-inf,0,-inf]
+	ub = [inf, inf, inf]
+	return lb,ub
+
+T1 = LazyFitModel('T1', _func_T1, _guess_T1, _bounds_T1, 'A*(1-exp(-x/T1)) + B')
 
 ###########################################
 # Sinussoidal
@@ -614,3 +644,34 @@ def _bounds_dualgaussian(x, y):
 	return lb, ub
 
 dualgaussian = LazyFitModel('dualgaussian', _func_dualgaussian, _guess_dualgaussian, _bounds_dualgaussian, 'A1*Norm(x;x1,s1)+A2*Norm(x;x2,s2)+B')
+
+###########################################
+# Dual lorentz
+###########################################
+
+def _func_duallorentz(x, A1, x1, FWHM1, A2, x2, FWHM2, B):
+	"""Sum of two Lorentzians and a constant background
+
+	Parameters:
+	x		xdata
+	A1		amplitude of first Lorentzian
+	x1		position of first Lorentzian
+	FWHM1	full width half maximum of first Lorentzian
+	A2		amplitude of second Lorentzian
+	x2		position of second Lorentzian
+	FWHM2	full width half maximum of first Lorentzian
+	B		constant background
+	"""
+	return A1/(1+(x-x1)**2/(FWHM1/2)**2) + A2/(1+(x-x2)**2/(FWHM2/2)**2) + B
+
+def _guess_duallorentz(x, y):
+	A1, x1, FWHM1, A2, x2, FWHM2, B = find_2peaks(x,y)
+	return [A1, x1, FWHM1, A2, x2, FWHM2, B]
+
+def _bounds_duallorentz(x, y):
+	# assume peak to be withing x data, define sigma to be positive
+	lb = [-inf, np.min(x), 0, -inf, np.min(x), 0, -inf]
+	ub = [inf, np.max(x), inf, inf, np.max(x), inf, inf]
+	return lb, ub
+
+duallorentz = LazyFitModel('duallorentz', _func_duallorentz, _guess_duallorentz, _bounds_duallorentz, 'A1*L(x;x1,FWHM1)+A2*L(x;x2,FWHM2)+B')

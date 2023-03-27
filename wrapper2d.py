@@ -58,7 +58,7 @@ class Wrapper2d:
 
         # extract properties from fit model
         self.f = self.model.f
-        self.fitvars = inspect.getargspec(self.f).args[
+        self.fitvars = inspect.getfullargspec(self.f).args[
                        2::]  # get fit function arguments but without 'x' and 'y' which are always the first two arguments
         self.n_DOF = self.z.size - len(self.fitvars)
 

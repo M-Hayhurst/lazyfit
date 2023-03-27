@@ -26,7 +26,7 @@ class LazyFitModel2d:
 
 	def get_param_names(self):
 		'''return dictionary with names of fit parameters'''
-		return inspect.getargspec(self.f).args[2::]  # get fit function arguments but without 'x' and 'y' which is always first arguments
+		return inspect.getfullargspec(self.f).args[2::]  # get fit function arguments but without 'x' and 'y' which is always first arguments
 
 	def __repr__(self):
 		'''show some usefull information when printing the model object in the terminal'''
