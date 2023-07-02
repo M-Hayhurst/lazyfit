@@ -6,6 +6,7 @@ import scipy.optimize
 import scipy.stats
 import lazyfit.utility as utility
 import types
+import textwrap
 
 def fit(fittype, x, y, dy=None, guess=None, bounds=None, fix={}, verbose=False, options={}):
     """Provides a short cut to creating a Wrapper object and calling fit()"""
@@ -113,31 +114,47 @@ class Wrapper:
         Only works if you supplied errors to the fitting routine'''
         return scipy.stats.distributions.chi2.sf(self.get_chi2(), self.n_DOF)
 
-    def plot(self, N=200, print_params=True, plot_guess=False, logy=False, plot_residuals=False, figsize=None, fmt='o',
+    def plot(self, N=200, print_params=True, plot_guess=False, logy=False, plot_residuals=False, figsize=(6,4), fmt='o',
              xlabel='', ylabel=''):
+        '''Plot the data and the fit.
+        
+        Kwargs:
+        N               (int, 200) Number of points used to draw fit and guess curves
+        print_params    (bool, True) Print the fit parameters to the right of the plot
+        plot_guess      (bool, False) Plot the initial guess
+        logy            (bool, False) Plot with logarithmic y axis
+        plot_residuals  (bool, False) Insert plot below showing fit residuals
+        figsize         (tupple), figure size
+        fmt             (sting, 'o') marker used for plotting data
+        xlabel          (string) x-axis label
+        ylabel          (string) y-axis label
+        '''
 
         fig = plt.figure(figsize=figsize)
 
+        # determine plot layout. Use a 3x3 grid. Plot is first 2 colums and all rows in the absence of residuals plot or first two rows in case of residual plot
         if plot_residuals:
-            ax1 = plt.subplot2grid((3, 1), (0, 0), rowspan=2)
+            ax1 = plt.subplot2grid((3, 3), (0, 0), rowspan=2, colspan=2)
         else:
-            ax1 = plt.gca()
+            ax1 = plt.subplot2grid((3, 3), (0, 0), rowspan=3, colspan=2)
 
+        # plot data
+        data_plot_kwargs = {'fmt':fmt, 'label':'Data', 'zorder':0, 'color':'tab:blue'}
         if self.has_dy:
-            ax1.errorbar(self.x, self.y, self.dy, fmt=fmt, label='Data', zorder=0)
+            ax1.errorbar(self.x, self.y, self.dy, **data_plot_kwargs)
         else:
-            ax1.plot(self.x, self.y, fmt, label='Data', zorder=0)
+            ax1.plot(self.x, self.y, **data_plot_kwargs)
 
+        # plot fit and guess
         xdummy = np.linspace(np.min(self.x), np.max(self.x), N)  # create finer xaxis for fit and guess
-        ax1.plot(xdummy, self.predict(xdummy), label='Fit', zorder=10)  # plot fig
-
+        ax1.plot(xdummy, self.predict(xdummy), label='Fit', zorder=10, color='tab:red')  # plot fig
         if plot_guess:
-            ax1.plot(xdummy, self.f(xdummy, *self.guess), label='Guess', zorder=5)  # plot guess
+            ax1.plot(xdummy, self.f(xdummy, *self.guess), label='Guess', zorder=5, color='tab:green')  # plot guess
 
+        # formatting of plot
         if logy:
             ax1.set_yscale('log')
 
-        # make legend and axes
         ax1.legend(loc='upper left', bbox_to_anchor=(1, 1), frameon=False)
         plt.ylabel(ylabel)
         if not plot_residuals:
@@ -145,11 +162,11 @@ class Wrapper:
 
         # plot residuals in subplot
         if plot_residuals:
-            ax2 = plt.subplot2grid((3, 1), (2, 0))
+            ax2 = plt.subplot2grid((3, 3), (2, 0), colspan=2)
             if self.has_dy:
-                ax2.errorbar(self.x, self.y - self.predict(self.x), self.dy, fmt='o')
+                ax2.errorbar(self.x, self.y - self.predict(self.x), self.dy, **data_plot_kwargs)
             else:
-                ax2.plot(self.x, self.y - self.predict(self.x))
+                ax2.plot(self.x, self.y - self.predict(self.x), **data_plot_kwargs)
 
             plt.ylabel('Residual')
             plt.grid(axis='y')
@@ -160,12 +177,15 @@ class Wrapper:
 
         # print list of fitting parameters
         if print_params:
+            ax3 = plt.subplot2grid((3, 3), (0, 2), rowspan=3)
+            ax3.axis('off') # remove axis
+
             # print model name
             summary = f'Model: {self.model.name}\n'
 
             #print the math expression
             if hasattr(self.model, 'string'):
-                summary += self.model.string + '\n'
+                summary += textwrap.fill(self.model.string, width=24) + '\n' # wrap the math expression to avoid the figure getting too wide
 
             # print fit paramters
             ljust_len = max([len(s) for s in self.fitvars])  # find the longs fit variable name
@@ -187,23 +207,31 @@ class Wrapper:
                 summary += '\nchi2red = %2.4f' % (chi2 / self.n_DOF)
                 summary += '\np = %2.4f' % self.get_pval()
 
-            y_cord = 0.6 if plot_residuals else 0.7
-            plt.text(1.02, y_cord, summary, transform=ax1.transAxes, horizontalalignment='left', fontfamily='monospace',
-                     verticalalignment='top')
+            # wrap the text
+
+            plt.text(-0.1, 0.75, summary, transform=ax3.transAxes, horizontalalignment='left', fontfamily='monospace',
+                     verticalalignment='top', wrap=True)
+            
+        # TODO. Set background colour for saving figure, make sure it always looks nice.
+        # TODO: text folding, how?
+        #plt.subplots_adjust(wspace=0, hspace=0)
+        #plt.tight_layout()
 
         # return fig handle
         return fig
 
     def plot_guess(self, N=200):
+        '''Plot data and initial guess'''
 
         fig = plt.figure()
 
         if self.has_dy:
-            plt.errorbar(self.x, self.y, self.dy, fmt='o', label='Data')
+            plt.errorbar(self.x, self.y, self.dy, fmt='o', label='Data', color='tab:blue')
         else:
             plt.plot(self.x, self.y, 'o', label='Data')
 
         xdummy = np.linspace(np.min(self.x), np.max(self.x), N)
-        plt.plot(xdummy, self.f(xdummy, *self.guess), label='Guess')
+        plt.plot(xdummy, self.f(xdummy, *self.guess), label='Guess', color='tab:green')
+        # TODO: Legend???
 
         return fig
