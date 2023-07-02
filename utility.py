@@ -4,7 +4,7 @@ import math as m
 
 EPSILON = 1E-20 # tiny offset applied to fit limits when fixing a paramter
 
-def format_error(y, dy, version=1):
+def format_error(y, dy, version=2):
 	"""return a nice string representation of a number and its error"""
 
 	# this is surprisingly hard, and I should probably just have found a library that does this
@@ -21,28 +21,38 @@ def format_error(y, dy, version=1):
 	y_exponent = int(m.floor(np.log10(np.abs(y))))  # order of magnitude
 	dy_exponent = int(m.floor(np.log10(dy)))
 
+	# get digits on y error
+	dy_digits = 1 + int(('%.2g'%(dy/10**dy_exponent))[0] == '1') # use two digits on dy if first digit is a 1
+
+	exp_diff = y_exponent - dy_exponent  # order of magnitude diff from y to dy
+
+	y_digits = exp_diff + dy_digits - 1 # number of digits on y after decimal. Add one to match the 2 error digits
+
+	sign_buffer = ' ' if y>0 else '' # add a blank space if positive number so a - does not shift to coumns
+
 	if version == 1:
-		'''format as (y ± dy) exponent'''
-
-		# get digits on y error
-		dy_digits = 1 + int(('%.2g'%(dy/10**dy_exponent))[0] == '1') # use two digits on dy if first digit is a 1
-
-		exp_diff = y_exponent - dy_exponent  # order of magnitude diff from y to dy
-
-		y_digits = exp_diff + dy_digits - 1 # number of digits on y after decimal. Add one to match the 2 error digits
-
-		sign_buffer = ' ' if y>0 else '' # add a blank space if positive number so a - does not shift to coumns
-
+		#format as (y ± dy) exponent
 		s = ('('+sign_buffer +
 			'%.*f' % (y_digits, y / 10 ** y_exponent)) + \
 			'±' +\
 			'%.*f)' % (y_digits, dy / 10 ** y_exponent) + \
 			'e'+str(y_exponent)
 		return s
+	
+	elif version == 2:
+		# format as y(dy) exponent
+		s = sign_buffer + \
+			'%.*f' % (y_digits, y / 10 ** y_exponent) + \
+			'(%s)' % str(dy*10**(2-dy_exponent))[:dy_digits] + \
+			'e'+str(y_exponent)
+		return s
 
 
 def clean_data(x, y):
-	"""remove any NaN or inf in the data"""
+	"""remove any NaN or inf in the data and sort the data to ensure monotoneously increasing x values
+	Returns:
+	x values, y values, numbers of removed points
+	"""
 
 	filt_x = np.logical_and(np.isnan(x) == 0, np.isinf(x) == 0)
 	filt_y = np.logical_and(np.isnan(y) == 0, np.isinf(y) == 0)
@@ -50,7 +60,12 @@ def clean_data(x, y):
 	filt = np.logical_and(filt_x, filt_y)
 	n_bad = np.sum(filt == 0)
 
-	return x[filt], y[filt], n_bad
+	x,y = x[filt], y[filt]
+
+	# finally, sort the arrays, probably redundant most of the time, but the fit guesses assume monotonusly increasing x
+	p = x.argsort() # get sorted indices for x
+
+	return x[p], y[p], n_bad
 
 
 def get_main_fourier_component(t, y, ignore_dc=True):
