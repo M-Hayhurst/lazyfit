@@ -39,6 +39,7 @@ class Wrapper:
         # errors
         if dy is None:
             self.has_dy = False
+            self.dy = dy
         else:
             if isinstance(dy, float) or isinstance(dy, int):
                 # assume this is a constant error
@@ -90,7 +91,7 @@ class Wrapper:
 
     def fit(self, options={}):
         # do the actual fit
-        self.fit_res = scipy.optimize.curve_fit(self.f, self.x, self.y, self.guess, bounds=self.bounds, **options)
+        self.fit_res = scipy.optimize.curve_fit(self.f, self.x, self.y, self.guess, self.dy, bounds=self.bounds, **options)
 
         # save parameters and errors as arrays
         self.params = self.fit_res[0]
@@ -213,8 +214,8 @@ class Wrapper:
             
         # TODO. Set background colour for saving figure, make sure it always looks nice.
         # TODO: text folding, how?
-        #plt.subplots_adjust(wspace=0, hspace=0)
-        #plt.tight_layout()
+
+        plt.subplots_adjust(left=0.08, right=1, top=0.92, bottom=0.08) # reduce the margins, mainly for saving
 
         # return fig handle
         return fig
