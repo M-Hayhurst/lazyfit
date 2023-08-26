@@ -514,6 +514,48 @@ def _bounds_lin(x, y):
 lin = LazyFitModel('lin', _func_lin, _guess_lin, _bounds_lin, 'A*x+B')
 
 ###########################################
+# quadratic
+###########################################
+
+def _func_quadratic(x, A, B, C):
+	"""Quadratic fit
+	A*x^2 + B*x + C
+
+	Parameters:
+	x		xdata
+	A		quadratic amplitude
+	B		linear amplitude
+	C		constant offset
+	"""
+	return A * x**2 + B*x + C
+
+def _guess_quadratic(x, y):
+	# again, this can be done analytically! But this is way uglier than the linear fit
+	# see https://www.varsitytutors.com/hotmath/hotmath_help/topics/quadratic-regression
+
+	x4 = np.sum(x**4)
+	x3 = np.sum(x**3)
+	x2 = np.sum(x**2)
+	x1 = np.sum(x)
+
+	x2y = np.sum(y*x**2)
+	xy = np.sum(x*y)
+	y = np.sum(y)
+	n = len(x)
+
+	guess = np.linalg.inv(np.array([[x4,x3,x2],[x3,x2,x1],[x2,x1,n]])) @ np.array([x2y,xy,y])
+	return guess.tolist()
+
+def _bounds_quadratic(x, y):
+	# assume peak to be withing x data, define sigma to be positive
+	lb = [-inf, -inf, -inf]
+	ub = [inf, inf, inf]
+	return lb, ub
+
+quadratic = LazyFitModel('quadratic', _func_quadratic, _guess_quadratic, _bounds_quadratic, 'A*x^2+B*x+C')
+
+
+###########################################
 # Voigt
 ###########################################
 
