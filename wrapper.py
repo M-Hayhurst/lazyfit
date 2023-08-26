@@ -114,7 +114,7 @@ class Wrapper:
         Only works if you supplied errors to the fitting routine'''
         return scipy.stats.distributions.chi2.sf(self.get_chi2(), self.n_DOF)
 
-    def plot(self, N=200, print_params=True, plot_guess=False, logy=False, plot_residuals=False, figsize=(6,4), fmt='o',
+    def plot(self, N=200, print_params=True, plot_guess=False, logy=False, plot_residuals=False, figsize=(8,4), marker='o',
              xlabel='', ylabel=''):
         '''Plot the data and the fit.
         
@@ -125,7 +125,7 @@ class Wrapper:
         logy            (bool, False) Plot with logarithmic y axis
         plot_residuals  (bool, False) Insert plot below showing fit residuals
         figsize         (tupple), figure size
-        fmt             (sting, 'o') marker used for plotting data
+        marker             (sting, 'o') marker used for plotting data
         xlabel          (string) x-axis label
         ylabel          (string) y-axis label
         '''
@@ -139,11 +139,10 @@ class Wrapper:
             ax1 = plt.subplot2grid((3, 3), (0, 0), rowspan=3, colspan=2)
 
         # plot data
-        data_plot_kwargs = {'fmt':fmt, 'label':'Data', 'zorder':0, 'color':'tab:blue'}
         if self.has_dy:
-            ax1.errorbar(self.x, self.y, self.dy, **data_plot_kwargs)
+            ax1.errorbar(self.x, self.y, self.dy, label='Data', zorder=0, color='tab:blue', fmt=marker)
         else:
-            ax1.plot(self.x, self.y, **data_plot_kwargs)
+            ax1.plot(self.x, self.y, marker, label='Data', zorder=0, color='tab:blue')
 
         # plot fit and guess
         xdummy = np.linspace(np.min(self.x), np.max(self.x), N)  # create finer xaxis for fit and guess
@@ -164,9 +163,9 @@ class Wrapper:
         if plot_residuals:
             ax2 = plt.subplot2grid((3, 3), (2, 0), colspan=2)
             if self.has_dy:
-                ax2.errorbar(self.x, self.y - self.predict(self.x), self.dy, **data_plot_kwargs)
+                ax2.errorbar(self.x, self.y - self.predict(self.x), self.dy, label='Data', zorder=0, color='tab:blue', fmt=marker)
             else:
-                ax2.plot(self.x, self.y - self.predict(self.x), **data_plot_kwargs)
+                ax2.plot(self.x, self.y - self.predict(self.x), marker, label='Data', zorder=0, color='tab:blue')
 
             plt.ylabel('Residual')
             plt.grid(axis='y')
