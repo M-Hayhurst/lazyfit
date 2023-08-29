@@ -482,7 +482,7 @@ def _bounds_normgaussian(x, y):
 	ub = [inf, np.max(x), inf]
 	return lb, ub
 
-normgaussian = LazyFitModel('normgaussian', _func_normgaussian, _guess_normgaussian, _bounds_normgaussian, 'A*Norm(x;x0,s)+B')
+normgaussian = LazyFitModel('normgaussian', _func_normgaussian, _guess_normgaussian, _bounds_normgaussian, 'A*Norm(x;x0,s)')
 
 ###########################################
 # linear
