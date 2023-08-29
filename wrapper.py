@@ -57,7 +57,7 @@ class Wrapper:
             except AttributeError:
                 raise Exception(f'No fit model named "{fittype}"')
         else:
-            raise Exception('Invalid fit model. Must either be a SimpleNamespace or a string referring to a built-in model.')
+            raise Exception('Invalid fit model. Must either be a lazyfit.models.FitModel object or a string referring to a built-in model.')
 
         # extrac stuff from fit model
         self.f = self.model.f
@@ -115,7 +115,7 @@ class Wrapper:
         Only works if you supplied errors to the fitting routine'''
         return scipy.stats.distributions.chi2.sf(self.get_chi2(), self.n_DOF)
 
-    def plot(self, N=200, print_params=True, plot_guess=False, logy=False, plot_residuals=False, figsize=(8,4), marker='o',
+    def plot(self, N=200, print_params=True, plot_guess=False, logy=False, logx=False, plot_residuals=False, figsize=(8,4), marker='o',
              xlabel='', ylabel=''):
         '''Plot the data and the fit.
         
@@ -124,6 +124,7 @@ class Wrapper:
         print_params    (bool, True) Print the fit parameters to the right of the plot
         plot_guess      (bool, False) Plot the initial guess
         logy            (bool, False) Plot with logarithmic y axis
+        logx            (bool, False) Plot with logarithmic x axis
         plot_residuals  (bool, False) Insert plot below showing fit residuals
         figsize         (tupple), figure size
         marker             (sting, 'o') marker used for plotting data
@@ -154,6 +155,8 @@ class Wrapper:
         # formatting of plot
         if logy:
             ax1.set_yscale('log')
+        if logx:
+            ax1.set_xscale('log')
 
         ax1.legend(loc='upper left', bbox_to_anchor=(1, 1), frameon=False)
         plt.ylabel(ylabel)
