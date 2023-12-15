@@ -48,7 +48,7 @@ def format_error(y, dy, version=2):
 		return s
 
 
-def clean_data(x, y):
+def clean_data(x, y, dy=None):
 	"""remove any NaN or inf in the data and sort the data to ensure monotoneously increasing x values
 	Returns:
 	x values, y values, numbers of removed points
@@ -61,11 +61,17 @@ def clean_data(x, y):
 	n_bad = np.sum(filt == 0)
 
 	x,y = x[filt], y[filt]
+	if type(dy) is np.ndarray:
+		dy = dy[filt]
 
 	# finally, sort the arrays, probably redundant most of the time, but the fit guesses assume monotonusly increasing x
 	p = x.argsort() # get sorted indices for x
+	x = x[p]
+	y = y[p]
+	if type(dy) is np.ndarray:
+		dy = dy[p]
 
-	return x[p], y[p], n_bad
+	return x,y,dy, n_bad
 
 
 def get_main_fourier_component(t, y, ignore_dc=True):

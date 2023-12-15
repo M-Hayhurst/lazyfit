@@ -30,12 +30,7 @@ class Wrapper:
         if x.size != y.size:
             raise Exception(
                 f'Dimensions of data to not match. Wrapper got x {x.shape}, y {y.shape}. x and y must have same length')
-
-        # clean data
-        self.x, self.y, n_bad = utility.clean_data(x, y)
-        if n_bad > 0:
-            print(f'Warning: Removing {n_bad} cases of NaN or Inf from data to enable fitting')
-
+        
         # errors
         if dy is None:
             self.has_dy = False
@@ -48,6 +43,11 @@ class Wrapper:
                 self.dy = dy
             self.has_dy = True
 
+        # clean data
+        self.x, self.y, self.dy, n_bad = utility.clean_data(x, y, dy)
+        if n_bad > 0:
+            print(f'Warning: Removing {n_bad} cases of NaN or Inf from data to enable fitting')
+
         # find fit model
         if type(fittype) is models.LazyFitModel: # a fitmodel saved in a simplenamespace was passed
             self.model = fittype
@@ -57,7 +57,7 @@ class Wrapper:
             except AttributeError:
                 raise Exception(f'No fit model named "{fittype}"')
         else:
-            raise Exception('Invalid fit model. Must either be a lazyfit.models.FitModel object or a string referring to a built-in model.')
+            raise Exception('Invalid fit model. Must either be a lazyfit.models.FitModel objectz or a string referring to a built-in model.')
 
         # extrac stuff from fit model
         self.f = self.model.f
@@ -95,7 +95,7 @@ class Wrapper:
 
         # save parameters and errors as arrays
         self.params = self.fit_res[0]
-        self.COVB = self.fit_res[1]
+        self.COVB = self.fit_res[1] # TODO change this name?
         self.errors = np.sqrt(np.diag(self.COVB))
 
         # also save fit paramters and errors as dicts
