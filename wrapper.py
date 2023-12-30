@@ -34,14 +34,13 @@ class Wrapper:
         # errors
         if dy is None:
             self.has_dy = False
-            self.dy = dy
-        else:
-            if isinstance(dy, float) or isinstance(dy, int):
-                # assume this is a constant error
-                self.dy = np.ones(len(self.x)) * dy
-            else:
-                self.dy = dy
+        elif isinstance(dy, float) or isinstance(dy, int): # constant dy 
+            dy = np.ones_like(x) * dy
             self.has_dy = True
+        elif isinstance(dy, np.ndarray) and dy.size == y.size: # valid array
+            self.has_dy = True
+        else:
+            raise Exception('dy must either be a float, integer, or an array with the same length as y.')
 
         # clean data
         self.x, self.y, self.dy, n_bad = utility.clean_data(x, y, dy)
