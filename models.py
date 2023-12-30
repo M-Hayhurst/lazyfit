@@ -32,7 +32,7 @@ class LazyFitModel:
 
 	def __repr__(self):
 		'''show some usefull information when printing the model object in the terminal'''
-		return f'<LazyFitModel "{self.name}". Fit parameters: {self.get_param_names()}.'
+		return f'<LazyFitModel "{self.name}". Fit parameters: {self.get_param_names()}>'
 
 ###########################################
 # generic functions
@@ -323,7 +323,7 @@ def _func_ramsey(x, A, f, phi, B, T2s, alpha):
 	return A*np.sin(x*f*2*pi+phi)*np.exp(-(x/T2s)**alpha)+B
 
 def _guess_ramsey(x,y):
-	return _guess_sin(x,y) + [np.max(x)/2, 2] # Use guess for sine. Set T2* to half of x range, set alpha to 2
+	return _guess_sin(x,y) + [np.max(x), 2] # Use guess for sine. Set T2* to x range, set alpha to 2
 
 def _bounds_ramsey(x, y):
 	lb = [0, 0, 0, -inf, 0, 0]
@@ -331,6 +331,25 @@ def _bounds_ramsey(x, y):
 	return (lb,up)
 
 ramsey = LazyFitModel('ramsey', _func_ramsey, _guess_ramsey, _bounds_ramsey, 'A*sin(x*f*2pi+phi)*exp(-(x/T2s)^alpha)+B')
+
+# for people who don't do Ramsey interferometry, we also include this model as "dampsine"
+
+def _func_dampsine(x, A, f, phi, B, T, alpha):
+	"""Decaying ramsey oscillations
+	A*np.sin(x*f*2*pi+phi)*np.exp(-(x/T2s)**alpha)+B
+
+	Parameters:
+	x		xdata
+	A 		amplitude for x=0
+	f		real oscillation frequency
+	phi		oscillation phase
+	B		constant background
+	T		1/e time of decay envelope
+	alpha	exponential exponent of decay envelope
+	"""
+	return A*np.sin(x*f*2*pi+phi)*np.exp(-(x/T)**alpha)+B
+
+dampsine = LazyFitModel('dampsine', _func_dampsine, _guess_ramsey, _bounds_ramsey, 'A*sin(x*f*2pi+phi)*exp(-(x/T)^alpha)+B')
 
 ###########################################
 # Ramsey envelope
