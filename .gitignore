@@ -3,3 +3,4 @@
 *.pyc
 .ipynb_checkpoints
 Test Notebooks/Make screenshot.ipynb
+/testvenv
