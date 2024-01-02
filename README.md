@@ -26,8 +26,8 @@ Lazyfit is documented in a number of Jupyter notebooks.
 - Fit wrapper for 2d data
 
 # Installation
-This project does not have an official release yet. For now, either clone the project or download it using the Code->Download Zip button on the Github page.
-Copy the "Lazyfit-main" folder to the "/site-packages" folder of your Python installation and rename "Lazyfit-main" to "lazyfit".
+You can pip install this library using "pip install git+https://github.com/M-Hayhurst/lazyfit@release"
+Alternative, switch to the "release" branch, download the contents of the git, and copy the "lazyfit" folder to tthe "/site-packages" folder of your Python installation 
 
 # Development notes
 This project is heavily tailored towards my own fitting needs encountered as a physicist working within experimental quantum optics.
