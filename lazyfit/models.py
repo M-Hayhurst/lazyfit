@@ -352,39 +352,56 @@ def _func_dampsine(x, A, f, phi, B, T, alpha):
 dampsine = LazyFitModel('dampsine', _func_dampsine, _guess_ramsey, _bounds_ramsey, 'A*sin(x*f*2pi+phi)*exp(-(x/T)^alpha)+B')
 
 ###########################################
-# Ramsey envelope
+# Stretched exponential
 ###########################################
 
-def _func_ramseyenvelope(x, A, T2s, alpha):
-	"""Decaying ramsey Envelope
-	A**np.exp(-(x/T2s)**alpha)
+def _func_stretchexp(x, A, T, alpha):
+	"""Stretched exponential
+	A*np.exp(-(x/T)**alpha)
 
 	Parameters:
 	x		xdata
 	A 		amplitude for x=0, this is initial visibility
-	T2s		1/e time of decay envelope (T2* time)
-	alpha	exponential exponent of decay envelope
+	T		1/e time of decay envelope
+	alpha	exponential exponent
 	"""
-	return A*np.exp(-(x/T2s)**alpha)
+	return A*np.exp(-(x/T)**alpha)
 
-def _guess_ramseyenvelope(x,y):
+def _guess_stretchexp(x,y):
 
 	# assume alpha = 1, use exponential guess
 	A, gamma, B = _guess_exp(x,y)
 	if gamma>0:
-		T2s = 1/gamma
+		T = 1/gamma
 	else:
-		T2s = np.mean(x)
+		T = np.mean(x)
 	alpha = 1
 
-	return [A, T2s, alpha]
+	return [A, T, alpha]
 
-def _bounds_ramseyenvelope(x, y):
+def _bounds_stretchexp(x, y):
 	lb = [0, 0, 0]
 	up = [inf, inf, inf]
 	return (lb,up)
 
-ramseyenvelope = LazyFitModel('ramseyenvelope', _func_ramseyenvelope, _guess_ramseyenvelope, _bounds_ramseyenvelope, 'A*exp(-(x/T2s)^alpha)')
+stretchexp = LazyFitModel('stretchexp', _func_stretchexp, _guess_stretchexp, _bounds_stretchexp, 'A*exp(-(x/T)^alpha)')
+
+# for compabability, we also include an alternative naming:
+
+def _func_ramseyenvelope(x, A, T2s, alpha):
+	"""
+	Same function as stretchexp, but different naming convention.
+	A*np.exp(-(x/T2)**alpha)
+
+	Parameters:
+	x		xdata
+	A 		amplitude for x=0, this is initial visibility
+	T		1/e time of decay envelope (T2 time)
+	alpha	exponential exponent
+	"""
+	return A*np.exp(-(x/T2s)**alpha)
+
+ramseyenvelope = LazyFitModel('ramseyenvelope', _func_ramseyenvelope, _guess_stretchexp, _bounds_stretchexp, 'A*exp(-(x/T2s)^alpha)')
 
 ###########################################
 # two level saturation
