@@ -270,6 +270,14 @@ T1 = LazyFitModel('T1', _func_T1, _guess_T1, _bounds_T1, 'A*(1-exp(-x/T1)) + B')
 # Sinussoidal
 ###########################################
 
+# Important note on fitting sines:
+# Obviously, the phase is very important to get right. 
+# Mathematically, we would like to restrict this to either 0..pi or -pi..pi.
+# Howevers, this can give numerical problems. Eg. The ideal phase might be 0.95pi, but the guess estimates -0.95 pi.
+# If we enforce a -pi..pi bound, the fit might fail to move from -0.95pi to 0.95 despite the guess being physically close.
+# My solution is to use a more generous -2pi to 2pi bounds on the phase, and restrict the guess to within -pi to pi. 
+# This should guarantee convergence.
+
 def _func_sin(x, A, f, phi, B):
 	"""Sinussoid plus constant background
 	A*np.sin(x*f*2*pi+phi)+B
@@ -289,7 +297,7 @@ def _guess_sin(x,y):
 	f, _ = utility.get_main_fourier_component(x,y)
 
 	# a robust phi estimate can be constructed by trying 8 different values, and calculating the inner product with the data
-	phi_list = np.arange(0, 2 * pi, pi / 4)
+	phi_list = np.arange(-pi, pi, pi / 4) # see note above on limits on phi
 	overlap = np.zeros(8)
 	for i, phi in enumerate(phi_list):
 		overlap[i] = np.sum((y - B) * _func_sin(x, 1, f, phi, 0))
@@ -297,7 +305,7 @@ def _guess_sin(x,y):
 	return [A, f, phi, B]
 
 def _bounds_sin(x, y):
-	lb = [0,0,0,-inf]
+	lb = [0,0, -2*pi,-inf] # see note above on limits on phi
 	up = [inf, inf, 2*pi, inf]
 	return (lb,up)
 
@@ -326,7 +334,7 @@ def _guess_ramsey(x,y):
 	return _guess_sin(x,y) + [np.max(x), 2] # Use guess for sine. Set T2* to x range, set alpha to 2
 
 def _bounds_ramsey(x, y):
-	lb = [0, 0, 0, -inf, 0, 0]
+	lb = [0, 0, -2*pi, -inf, 0, 0]
 	up = [inf, inf, 2*pi, inf, inf, inf]
 	return (lb,up)
 
