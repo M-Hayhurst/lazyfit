@@ -146,10 +146,14 @@ class Wrapper:
             ax1.plot(self.x, self.y, marker, label='Data', zorder=0, color='tab:blue')
 
         # plot fit and guess
-        xdummy = np.linspace(np.min(self.x), np.max(self.x), N)  # create finer xaxis for fit and guess
+        if logx: # if the xaxis is logarithmic, we want logarithmically spaced xvalues for the fit
+            xdummy = np.logspace(np.log10(np.min(self.x)), np.log10(np.max(self.x)), N)  # create finer xaxis for fit and guess
+        else:
+            xdummy = np.linspace(np.min(self.x), np.max(self.x), N)  # create finer xaxis for fit and guess
+        
         ax1.plot(xdummy, self.predict(xdummy), label='Fit', zorder=10, color='tab:red')  # plot fig
         if plot_guess:
-            ax1.plot(xdummy, self.f(xdummy, *self.guess), label='Guess', zorder=5, color='tab:green')  # plot guess
+            ax1.plot(xdummy, self.f(xdummy, *self.guess), '--', label='Guess', zorder=5, color='tab:orange')  # plot guess, use dashed lines to make it more distinct
 
         # formatting of plot
         if logy:
@@ -215,7 +219,6 @@ class Wrapper:
                      verticalalignment='top', wrap=True)
             
         # TODO. Set background colour for saving figure, make sure it always looks nice.
-        # TODO: text folding, how?
 
         plt.subplots_adjust(left=0.08, right=1, top=0.92, bottom=0.08) # reduce the margins, mainly for saving
 
@@ -233,7 +236,7 @@ class Wrapper:
             plt.plot(self.x, self.y, 'o', label='Data')
 
         xdummy = np.linspace(np.min(self.x), np.max(self.x), N)
-        plt.plot(xdummy, self.f(xdummy, *self.guess), label='Guess', color='tab:green')
+        plt.plot(xdummy, self.f(xdummy, *self.guess), '--', label='Guess', color='tab:orange')
         # TODO: Legend???
 
         return fig
