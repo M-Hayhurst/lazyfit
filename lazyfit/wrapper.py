@@ -7,6 +7,7 @@ import scipy.stats
 import lazyfit.utility as utility
 import types
 import textwrap
+from lazyfit.findmodel import find_model
 
 def fit(fittype, x, y, dy=None, guess=None, bounds=None, fix={}, verbose=False, options={}):
     """Provides a short cut to creating a Wrapper object and calling fit()"""
@@ -51,9 +52,8 @@ class Wrapper:
         if type(fittype) is models.LazyFitModel: # a fitmodel saved in a simplenamespace was passed
             self.model = fittype
         elif type(fittype) is str:
-            try:
-                self.model = getattr(models, fittype)
-            except AttributeError:
+            self.model = find_model(fittype)
+            if self.model is None:
                 raise Exception(f'No fit model named "{fittype}"')
         else:
             raise Exception('Invalid fit model. Must either be a lazyfit.models.FitModel objectz or a string referring to a built-in model.')

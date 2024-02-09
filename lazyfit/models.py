@@ -278,7 +278,7 @@ T1 = LazyFitModel('T1', _func_T1, _guess_T1, _bounds_T1, 'A*(1-exp(-x/T1)) + B')
 # My solution is to use a more generous -2pi to 2pi bounds on the phase, and restrict the guess to within -pi to pi. 
 # This should guarantee convergence.
 
-def _func_sin(x, A, f, phi, B):
+def _func_sine(x, A, f, phi, B):
 	"""Sinussoid plus constant background
 	A*np.sin(x*f*2*pi+phi)+B
 
@@ -291,7 +291,7 @@ def _func_sin(x, A, f, phi, B):
 	"""
 	return A*np.sin(x*f*2*pi+phi)+B
 
-def _guess_sin(x,y):
+def _guess_sine(x,y):
 	B = np.mean(y)
 	A = np.sqrt(2)*np.std(y)
 	f, _ = utility.get_main_fourier_component(x,y)
@@ -300,16 +300,16 @@ def _guess_sin(x,y):
 	phi_list = np.arange(-pi, pi, pi / 4) # see note above on limits on phi
 	overlap = np.zeros(8)
 	for i, phi in enumerate(phi_list):
-		overlap[i] = np.sum((y - B) * _func_sin(x, 1, f, phi, 0))
+		overlap[i] = np.sum((y - B) * _func_sine(x, 1, f, phi, 0))
 	phi = phi_list[np.argmax(overlap)]
 	return [A, f, phi, B]
 
-def _bounds_sin(x, y):
+def _bounds_sine(x, y):
 	lb = [0,0, -2*pi,-inf] # see note above on limits on phi
 	up = [inf, inf, 2*pi, inf]
 	return (lb,up)
 
-sin = LazyFitModel('sin', _func_sin, _guess_sin, _bounds_sin, 'A*sin(x*f*2pi+phi)+B')
+sine = LazyFitModel('sine', _func_sine, _guess_sine, _bounds_sine, 'A*sin(x*f*2pi+phi)+B')
 
 ###########################################
 # Ramsey
@@ -331,7 +331,7 @@ def _func_ramsey(x, A, f, phi, B, T2s, alpha):
 	return A*np.sin(x*f*2*pi+phi)*np.exp(-(x/T2s)**alpha)+B
 
 def _guess_ramsey(x,y):
-	return _guess_sin(x,y) + [np.max(x), 2] # Use guess for sine. Set T2* to x range, set alpha to 2
+	return _guess_sine(x,y) + [np.max(x), 2] # Use guess for sine. Set T2* to x range, set alpha to 2
 
 def _bounds_ramsey(x, y):
 	lb = [0, 0, -2*pi, -inf, 0, 0]
@@ -343,7 +343,7 @@ ramsey = LazyFitModel('ramsey', _func_ramsey, _guess_ramsey, _bounds_ramsey, 'A*
 # for people who don't do Ramsey interferometry, we also include this model as "dampsine"
 
 def _func_dampsine(x, A, f, phi, B, T, alpha):
-	"""Decaying ramsey oscillations
+	"""Exponentially decaying sine
 	A*np.sin(x*f*2*pi+phi)*np.exp(-(x/T2s)**alpha)+B
 
 	Parameters:
