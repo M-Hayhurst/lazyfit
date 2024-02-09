@@ -5,10 +5,23 @@ import math as m
 EPSILON = 1E-20 # tiny offset applied to fit limits when fixing a paramter
 
 def format_error(y, dy, version=2):
-	"""return a nice string representation of a number and its error"""
+	"""return a nice string representation of a number and its error
+	Parameters:
+	y			value
+	dy			error
+	version 	formatting style (default value = 2)
+
+	Returns:
+	string
+
+	version 1 formats errors as (y ± dy) exponent
+	version 2 formats errors as y(dy) exponent
+	version 2 is more compact.
+
+	By convention, errors are a single digit unless the first digit is 1.
+	"""
 
 	# this is surprisingly hard, and I should probably just have found a library that does this
-
 	if np.isinf(dy):
 		return '%g.3±inf' % y
 	elif np.isnan(dy):
@@ -20,32 +33,35 @@ def format_error(y, dy, version=2):
 
 	y_exponent = int(m.floor(np.log10(np.abs(y))))  # order of magnitude
 	dy_exponent = int(m.floor(np.log10(dy)))
-
-	# get digits on y error
-	dy_digits = 1 + int(('%.2g'%(dy/10**dy_exponent))[0] == '1') # use two digits on dy if first digit is a 1
-
 	exp_diff = y_exponent - dy_exponent  # order of magnitude diff from y to dy
 
-	y_digits = exp_diff + dy_digits - 1 # number of digits on y after decimal. Add one to match the 2 error digits
+	# determinte how many digits we want on the error.
+	# We only want two digits if the first digit is 1, eg. 12.34+-0.41 should become 12.34(4), but 12.34+-0.12 should be 12.34(12)
+	dy_2digits = int(str(round(dy*10**(-dy_exponent+1)))[0:2]) # first two digits of error as int
 
+	if dy_2digits<20: # keep two
+		n_dy_digits = 2
+		dy_str = str(dy_2digits)
+	elif dy_2digits<95: # python rounds to nearest even number, so 9.5 gets rounded up
+		dy_str = str(round(dy_2digits/10)) # round to single digit
+		n_dy_digits = 1
+	else: # 96,97,98,99 need to be rounded up
+		dy_str = '1'
+		n_dy_digits = 1
+		dy_exponent += 1
+
+	# determine significant digits on y
+	y_digits = exp_diff + n_dy_digits - 1 # number of digits on y after decimal. Add one to match the 2 error digits
 	sign_buffer = ' ' if y>0 else '' # add a blank space if positive number so a - does not shift to coumns
+	y_str = '%.*f' % (y_digits, y / 10 ** y_exponent)
 
 	if version == 1:
 		#format as (y ± dy) exponent
-		s = ('('+sign_buffer +
-			'%.*f' % (y_digits, y / 10 ** y_exponent)) + \
-			'±' +\
-			'%.*f)' % (y_digits, dy / 10 ** y_exponent) + \
-			'e'+str(y_exponent)
-		return s
+		return '('+sign_buffer+ y_str + '±' + dy_str + ')e'+str(y_exponent)
 	
 	elif version == 2:
 		# format as y(dy) exponent
-		s = sign_buffer + \
-			'%.*f' % (y_digits, y / 10 ** y_exponent) + \
-			'(%s)' % str(dy*10**(2-dy_exponent))[:dy_digits] + \
-			'e'+str(y_exponent)
-		return s
+		return sign_buffer + y_str +'(' +dy_str + ')e'+str(y_exponent)
 
 
 def clean_data(x, y, dy=None):
