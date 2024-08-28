@@ -272,7 +272,7 @@ T1 = LazyFitModel('T1', _func_T1, _guess_T1, _bounds_T1, 'A*(1-exp(-x/T1)) + B')
 
 # Important note on fitting sines:
 # Obviously, the phase is very important to get right. 
-# Mathematically, we would like to restrict this to either 0..pi or -pi..pi.
+# Mathematically, we would like to restrict this to either 0..2pi or -pi..pi.
 # Howevers, this can give numerical problems. Eg. The ideal phase might be 0.95pi, but the guess estimates -0.95 pi.
 # If we enforce a -pi..pi bound, the fit might fail to move from -0.95pi to 0.95 despite the guess being physically close.
 # My solution is to use a more generous -2pi to 2pi bounds on the phase, and restrict the guess to within -pi to pi. 
