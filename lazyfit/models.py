@@ -123,17 +123,17 @@ lorentz = LazyFitModel('lorentz', _func_lorentz, _guess_lorentz, _bounds_lorentz
 # exponential decay
 ###########################################
 
-def _func_exp(x, A, Gamma, B):
+def _func_exp(x, A, k, B):
 	"""Single exponential decay plus constant background
-	A*np.exp(-x*Gamma) + B
+	A*np.exp(-x*k) + B
 
 	Parameters:
 	x		xdata
 	A		amplitude
-	Gamma	decay rate
+	k	decay rate
 	B		constant background
 	"""
-	return A*np.exp(-x*Gamma) + B
+	return A*np.exp(-x*k) + B
 
 def _guess_exp(x,y):
 	B = np.min(y)
@@ -145,69 +145,69 @@ def _guess_exp(x,y):
 		x1 = x[filt]
 		y1 = y[filt]
 		e_time = x1[np.min(np.argwhere(y1-B<A*np.exp(-1)))]
-		Gamma = 1/e_time
+		k = 1/e_time
 	except Exception:
-		Gamma = 0
+		k = 0
 
-	return [A, Gamma, B]
+	return [A, k, B]
 
 def _bounds_exp(x,y):
 	lb = [0,0,-inf]
 	ub = [inf, inf, inf]
 	return lb,ub
 
-exp = LazyFitModel('exp', _func_exp, _guess_exp, _bounds_exp, 'A*exp(-x*Gamma) + B')
+exp = LazyFitModel('exp', _func_exp, _guess_exp, _bounds_exp, 'A*exp(-x*k) + B')
 
 ###########################################
 # biexponential decay
 ###########################################
 
-def _func_biexp(x, A1, Gamma1, A2, Gamma2, B):
+def _func_biexp(x, A1, k1, A2, k2, B):
 	"""Biexponential decay plus constant background
-	A1*np.exp(-x*Gamma1) + A2*np.exp(-x*Gamma2) + B
+	A1*np.exp(-x*k1) + A2*np.exp(-x*k2) + B
 
 	Params:
 	x		xdata
 	A1		amplitude of first exponential
-	Gamma1	decay rate of first exponential
+	k1		decay rate of first exponential
 	A2		amplitude of second exponential
-	Gamma2	decay rate of second exponential
+	k2		decay rate of second exponential
 	B 		constant background
 	"""
-	return A1*np.exp(-x*Gamma1) + A2*np.exp(-x*Gamma2) + B
+	return A1*np.exp(-x*k1) + A2*np.exp(-x*k2) + B
 
 def _guess_biexp(x,y):
-	A, Gamma, B = _guess_exp(x,y) # use the monoexponential guess, assume the second exponential is zero
-	return [A, Gamma, 0, 0, B]
+	A, k, B = _guess_exp(x,y) # use the monoexponential guess, assume the second exponential is zero
+	return [A, k, 0, 0, B]
 
 def _bounds_biexp(x,y):
 	lb = [0, 0, 0, 0, -inf]
 	ub = [inf, inf, inf, inf, inf]
 	return lb,ub
 
-biexp = LazyFitModel('biexp', _func_biexp, _guess_biexp, _bounds_biexp, 'A1*exp(-x*Gamma1)+A2*exp(-x*Gamma2) + B')
+biexp = LazyFitModel('biexp', _func_biexp, _guess_biexp, _bounds_biexp, 'A1*exp(-x*k1)+A2*exp(-x*k2) + B')
 
 ###########################################
 # exponential decay convolved  with gaussian response
 ###########################################
 
-def _func_convexp(x, A, Gamma, B,  x0, s):
+def _func_convexp(x, A, k, B,  x0, s):
 	"""Single exponential decay convolved with Gaussian response plus background
 
 	Parameters:
 	x 		xdata
 	A 		exponential amplitude post convolution
-	Gamma	exponential decay rate
+	k		exponential decay rate
 	B		constant background
 	x0		start time of exponential decay
 	s		standard deviation of detector response
 		"""
 
 	if s == 0:
-		return (x>=x0) * A * np.exp(-Gamma*(x-x0)) + B
+		return (x>=x0) * A * np.exp(-k*(x-x0)) + B
 
-	peakval = np.exp(0.5*Gamma**2*s**2)*scipy.special.erfc(Gamma*s/np.sqrt(2))
-	return (A/peakval)*np.exp(-Gamma*(x-x0)+0.5*Gamma**2*s**2)*scipy.special.erfc((-(x-x0)/s+Gamma*s)/np.sqrt(2)) + B
+	peakval = np.exp(0.5*k**2*s**2)*scipy.special.erfc(k*s/np.sqrt(2))
+	return (A/peakval)*np.exp(-k*(x-x0)+0.5*k**2*s**2)*scipy.special.erfc((-(x-x0)/s+k*s)/np.sqrt(2)) + B
 
 def _guess_convexp(x, y):
 	x0 = x[np.argmax(y)]
@@ -220,21 +220,21 @@ def _guess_convexp(x, y):
 		x1 = x[filt]
 		y1 = y[filt]
 		e_time = x1[np.min(np.argwhere(y1 - B < A * np.exp(-1)))]
-		Gamma = 1 / e_time
+		k = 1 / e_time
 	except Exception:
-		Gamma = 0
+		k = 0
 
 	# assume that the instrument response correspondsto 10% of the decay time
-	s = 0.1/Gamma
+	s = 0.1/k
 
-	return [A, Gamma, B, x0, s]
+	return [A, k, B, x0, s]
 
 def _bounds_convexp(x,y):
 	lb = [0, 0, -inf, -inf, 0]
 	ub = [inf, inf, inf, inf, inf]
 	return lb,ub
 
-convexp = LazyFitModel('conexp', _func_convexp, _guess_convexp, _bounds_convexp, 'A*exp(-x*Gamma) conv N(x;0,s) + B')
+convexp = LazyFitModel('conexp', _func_convexp, _guess_convexp, _bounds_convexp, 'A*exp(-x*k) conv N(x;0,s) + B')
 
 
 ###########################################
@@ -255,9 +255,9 @@ def _func_T1(x, A, T1, B):
 
 def _guess_T1(x,y):
 
-	[_, Gamma, _] = _guess_exp(x,-y)
+	[_, k, _] = _guess_exp(x,-y)
 
-	return [np.max(y), 1/Gamma, np.min(y)] # TODO, can be more accurate
+	return [np.max(y), 1/k, np.min(y)] # TODO, can be more accurate
 
 def _bounds_T1(x,y):
 	lb = [-inf,0,-inf]
@@ -342,9 +342,9 @@ ramsey = LazyFitModel('ramsey', _func_ramsey, _guess_ramsey, _bounds_ramsey, 'A*
 
 # for people who don't do Ramsey interferometry, we also include this model as "dampsine"
 
-def _func_dampsine(x, A, f, phi, B, T, alpha):
+def _func_dampsine(x, A, f, phi, B, x0, alpha):
 	"""Exponentially decaying sine
-	A*np.sin(x*f*2*pi+phi)*np.exp(-(x/T2s)**alpha)+B
+	A*np.sin(x*f*2*pi+phi)*np.exp(-(x/x0)**alpha)+B
 
 	Parameters:
 	x		xdata
@@ -352,47 +352,47 @@ def _func_dampsine(x, A, f, phi, B, T, alpha):
 	f		real oscillation frequency
 	phi		oscillation phase
 	B		constant background
-	T		1/e time of decay envelope
+	x0		x value at which the amplitude has decayed to 1/e
 	alpha	exponential exponent of decay envelope
 	"""
-	return A*np.sin(x*f*2*pi+phi)*np.exp(-(x/T)**alpha)+B
+	return A*np.sin(x*f*2*pi+phi)*np.exp(-(x/x0)**alpha)+B
 
-dampsine = LazyFitModel('dampsine', _func_dampsine, _guess_ramsey, _bounds_ramsey, 'A*sin(x*f*2pi+phi)*exp(-(x/T)^alpha)+B')
+dampsine = LazyFitModel('dampsine', _func_dampsine, _guess_ramsey, _bounds_ramsey, 'A*sin(x*f*2pi+phi)*exp(-(x/x0)^alpha)+B')
 
 ###########################################
 # Stretched exponential
 ###########################################
 
-def _func_stretchexp(x, A, T, alpha):
+def _func_stretchexp(x, A, x0, alpha):
 	"""Stretched exponential
-	A*np.exp(-(x/T)**alpha)
+	A*np.exp(-(x/x0)**alpha)
 
 	Parameters:
 	x		xdata
 	A 		amplitude for x=0, this is initial visibility
-	T		1/e time of decay envelope
+	x0		x value where amplutude has decayed to 1/e
 	alpha	exponential exponent
 	"""
-	return A*np.exp(-(x/T)**alpha)
+	return A*np.exp(-(x/x0)**alpha)
 
 def _guess_stretchexp(x,y):
 
 	# assume alpha = 1, use exponential guess
-	A, gamma, B = _guess_exp(x,y)
-	if gamma>0:
-		T = 1/gamma
+	A, k, B = _guess_exp(x,y)
+	if k>0:
+		x0 = 1/k
 	else:
-		T = np.mean(x)
+		x0 = np.mean(x)
 	alpha = 1
 
-	return [A, T, alpha]
+	return [A, x0, alpha]
 
 def _bounds_stretchexp(x, y):
 	lb = [0, 0, 0]
 	up = [inf, inf, inf]
 	return (lb,up)
 
-stretchexp = LazyFitModel('stretchexp', _func_stretchexp, _guess_stretchexp, _bounds_stretchexp, 'A*exp(-(x/T)^alpha)')
+stretchexp = LazyFitModel('stretchexp', _func_stretchexp, _guess_stretchexp, _bounds_stretchexp, 'A*exp(-(x/x0)^alpha)')
 
 # for compabability, we also include an alternative naming:
 
