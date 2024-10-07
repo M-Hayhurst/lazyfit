@@ -21,13 +21,13 @@ def find_model(model_name):
     return None
 
 
-abbreviations = {
+abbreviations = { # look up table, to convert an abbreviated model name to the model name used in models.py
     'lorentzian' : 'lorentz',
     'exponential': 'exp',
     'biexp': 'biexponential',
     'convolvedexponential': 'convexp',
     'sin': 'sine',
-    'dampsin' : 'dampsine', # lol
+    'dampsin' : 'dampsine', # forgive me father, for I have damp sin.
     'dampedsin': 'dampsine',
     'dampedsine': 'dampsine',
     '2lvlsat':'twolvlsat',
@@ -36,6 +36,8 @@ abbreviations = {
     'quad': 'quadratic',
     'logisticpulse':'logpulse',
     'dualgauss': 'dualgaussian',
+    'quad':'quadratic',
+    'poly2': 'quadratic',
     't1':'T1' # here we need to conver back to uppser case
 }
 
