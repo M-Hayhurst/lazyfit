@@ -12,9 +12,9 @@ These models automatically estimate good starting points and bounds for the fit 
 Finally, lazyfit also contains a wrapper for fitting two-dimensional data, which removes the tedious process of converting data between matrices and 1d-arrays.
 
 # Documentation
-Lazyfit is documented in a number of Jupyter notebooks.
+Lazyfit is documented across several Jupyter notebooks.
 - The features of the lazyfit wrapper are covered in [example_notebooks/feature_overview.ipynb](example_notebooks/feature_overview.ipynb)
-- A catalogue of built-in fit modes is given in [example_notebooks/model_catalog.ipynb](example_notebooks/model_catalog.ipynb)
+- A catalogue of built-in fit modes is given in [example_notebooks/model_catalogue.ipynb](example_notebooks/model_catalogue.ipynb)
 - Fitting of 2-dimensional data is covered in [example_notebooks/2d_fitting.ipynb](example_notebooks/2d_fitting.ipynb)
 
 # Key features
@@ -27,11 +27,11 @@ Lazyfit is documented in a number of Jupyter notebooks.
 
 # Installation
 You can pip install this library using "pip install git+https://github.com/M-Hayhurst/lazyfit@release"
-Alternative, switch to the "release" branch, download the contents of the git, and copy the "lazyfit" folder to tthe "/site-packages" folder of your Python installation 
+Alternatively, switch to the "release" branch, download the contents of the git, and run "python setup.py install".
 
 # Development notes
-This project is heavily tailored towards my own fitting needs encountered as a physicist working within experimental quantum optics.
-For this reason, the model library probably omits many fit models which are essential to other disciplines.
+This project is heavily tailored towards my fitting needs as a physicist working within experimental quantum optics.
+For this reason, the model library probably omits many fit models essential to other disciplines.
 Fortunately, it is easy to add your own fit models as explained in the feature overview.
 
 Currently, 2d fitting is at an experimental stage.
