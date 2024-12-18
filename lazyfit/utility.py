@@ -110,8 +110,21 @@ def get_main_fourier_component(t, y, ignore_dc=True):
 def get_voigt_FWHM(G, L):
 	'''returns the FWHM of a Voigt distribution given its Gassian FWHM G and lorentzian FWHM L'''
 
-	# equation taken from https://en.wikipedia.org/wiki/Voigt_profile
+	# equation taken from https://en.wikipedia.org/wiki/Voigt_profile#The_width_of_the_Voigt_profile
 	return 0.5346*L + np.sqrt(0.2166*L**2+G**2)
+
+def get_voigt_FWHM_err(G, L, G_err, L_err, LG_cov):
+	'''returns the error on the FWHM of a Voigt distribution given its Gassian FWHM G and lorentzian FWHM L'''
+
+	a = 0.5346 # first coeffecient in FWHM formular, see https://en.wikipedia.org/wiki/Voigt_profile#The_width_of_the_Voigt_profile
+	b = 0.2166
+
+	# calculate variance using error propagation
+	var = (a+(b*L**2+G**2)**-0.5*b*L)**2 * L_err**2
+	+ ( (b*L**2+G**2)**-0.5*G)**2 * G_err**2
+	+ 2 * ( (b*L**2+G**2)**-1.5*G*b*L)**2 * LG_cov 
+
+	return var**0.5
 
 def sigma_to_FWHM(s):
 	'''calculate FWHM of gaussian given its standard deviation'''

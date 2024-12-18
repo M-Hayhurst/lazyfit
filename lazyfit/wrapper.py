@@ -113,6 +113,14 @@ class Wrapper:
         '''Return probability of null hypothesis given chisquared sum, and degrees of freedom.
         Only works if you supplied errors to the fitting routine'''
         return scipy.stats.distributions.chi2.sf(self.get_chi2(), self.n_DOF)
+    
+    def get_fwhm(self):
+        '''Return the estimated FWHM and the error on the FWHM.
+        Will only work for fit models that contain a fwhm method'''
+
+        if self.model.fwhm is None:
+            raise Exception(f'The fit model {self.model.name} does not have a fwhm method')
+        return self.model.fwhm(self)
 
     def plot(self, N=200, print_params=True, plot_guess=False, logy=False, logx=False, plot_residuals=False, figsize=(8,4), marker='o',
              xlabel='', ylabel=''):

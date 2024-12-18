@@ -18,13 +18,14 @@ inf = float('inf')
 class LazyFitModel:
 	'''Class for containg fitmodels. '''
 
-	def __init__(self, name, f, guess=None, bounds=None, math_string=None, description=None ):
+	def __init__(self, name, f, guess=None, bounds=None, math_string=None, description=None, fwhm=None ):
 		self.name = name # string containing model name
 		self.f = f # function for evaluating model
 		self.string = math_string # string with math expression
 		self.guess = guess # function for getting guess
 		self.bounds = bounds # function for getting bounds
 		self.description = description # additional description
+		self.fwhm = fwhm # optional function to get full-width half-maximum of statistical distributions
 
 	def get_param_names(self):
 		'''return dictionary with names of fit parameters'''
@@ -117,7 +118,11 @@ def _bounds_lorentz(x, y):
 	ub = [inf, np.max(x), inf, inf]
 	return (lb, ub)
 
-lorentz = LazyFitModel('lorentz', _func_lorentz, _guess_lorentz, _bounds_lorentz, 'A/(1+(x-x0)^2/(FWHM/2)^2)+B')
+def _fwhm_lorentz(fit):
+	'''Return fwhm and error on fwhm for Lorentz distribution'''
+	return fit.params_dict['FWHM'], fit.errors_dict['FWHM']
+
+lorentz = LazyFitModel('lorentz', _func_lorentz, _guess_lorentz, _bounds_lorentz, 'A/(1+(x-x0)^2/(FWHM/2)^2)+B', fwhm=_fwhm_lorentz)
 
 ###########################################
 # exponential decay
@@ -496,7 +501,11 @@ def _bounds_gaussian(x, y):
 	ub = [inf, np.max(x), inf, inf]
 	return lb, ub
 
-gaussian = LazyFitModel('gaussian', _func_gaussian, _guess_gaussian, _bounds_gaussian, 'A*exp(-(x-x0)^2/(2*s^2)) + B')
+def _fwhm_gaussian(fit):
+	'''Return fwhm and error on fwhm for Gaussian distribution'''
+	return utility.sigma_to_FWHM(fit.params_dict['s']), utility.sigma_to_FWHM(fit.errors_dict['s'])
+
+gaussian = LazyFitModel('gaussian', _func_gaussian, _guess_gaussian, _bounds_gaussian, 'A*exp(-(x-x0)^2/(2*s^2)) + B' , fwhm=_fwhm_gaussian)
 
 ###########################################
 # Normalised gaussian
@@ -526,7 +535,7 @@ def _bounds_normgaussian(x, y):
 	ub = [inf, np.max(x), inf]
 	return lb, ub
 
-normgaussian = LazyFitModel('normgaussian', _func_normgaussian, _guess_normgaussian, _bounds_normgaussian, 'A*Norm(x;x0,s)')
+normgaussian = LazyFitModel('normgaussian', _func_normgaussian, _guess_normgaussian, _bounds_normgaussian, 'A*Norm(x;x0,s)', fwhm=_fwhm_gaussian)
 
 ###########################################
 # linear
@@ -632,7 +641,17 @@ def _bounds_voigt(x, y):
 	ub = [inf, np.max(x), inf, inf, inf]
 	return lb, ub
 
-voigt = LazyFitModel('voigt', _func_voigt, _guess_voigt, _bounds_voigt, 'A*Voigt(x;x0,L,G)+B')
+def _fwhm_voigt(fit):
+	'''Return fwhm and error on fwhm for Voigt distribution.
+	We will use the approximate formular provided by Kielkopf (see https://en.wikipedia.org/wiki/Voigt_profile#The_width_of_the_Voigt_profile)
+	Additionally, we will use the error propagation formular and the fact that the L and G parameters are not independent but rather correlated
+	
+	'''
+	val = utility.get_voigt_FWHM(fit.params_dict['G'], fit.params_dict['L'])
+	err = utility.get_voigt_FWHM_err(fit.params_dict['G'], fit.params_dict['L'], fit.errors_dict['G'], fit.errors_dict['L'], fit.COVB[2,3])
+	return val, err
+
+voigt = LazyFitModel('voigt', _func_voigt, _guess_voigt, _bounds_voigt, 'A*Voigt(x;x0,L,G)+B', fwhm=_fwhm_voigt)
 
 ###########################################
 # logistic
