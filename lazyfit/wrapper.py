@@ -123,7 +123,7 @@ class Wrapper:
         return self.model.fwhm(self)
 
     def plot(self, N=200, print_params=True, plot_guess=False, logy=False, logx=False, plot_residuals=False, figsize=(8,4), marker='o',
-             xlabel='', ylabel=''):
+             xlabel='', ylabel='', xlim=None, ylim=None):
         '''Plot the data and the fit.
         
         Kwargs:
@@ -137,6 +137,8 @@ class Wrapper:
         marker             (sting, 'o') marker used for plotting data
         xlabel          (string) x-axis label
         ylabel          (string) y-axis label
+        xlim            (tupple) x-axis limits for plotting. Envokes plt.xlim()
+        ylim            (tupple) y-axis limits for plotting. Envokes plt.ylim()
         '''
 
         fig = plt.figure(figsize=figsize)
@@ -168,6 +170,10 @@ class Wrapper:
             ax1.set_yscale('log')
         if logx:
             ax1.set_xscale('log')
+        if xlim:
+            plt.xlim(xlim)
+        if ylim:
+            plt.ylim(ylim)
 
         ax1.legend(loc='upper left', bbox_to_anchor=(1, 1), frameon=False)
         plt.ylabel(ylabel)
@@ -181,7 +187,9 @@ class Wrapper:
                 ax2.errorbar(self.x, self.y - self.predict(self.x), self.dy, label='Data', zorder=0, color='tab:blue', fmt=marker)
             else:
                 ax2.plot(self.x, self.y - self.predict(self.x), marker, label='Data', zorder=0, color='tab:blue')
-
+            
+            if xlim:    
+                plt.xlim(xlim)
             plt.ylabel('Residual')
             plt.grid(axis='y')
             plt.xlabel(xlabel)
