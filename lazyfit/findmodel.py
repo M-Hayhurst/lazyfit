@@ -27,6 +27,8 @@ abbreviations = { # look up table, to convert an abbreviated model name to the m
     'biexp': 'biexponential',
     'convolvedexponential': 'convexp',
     'sin': 'sine',
+    'gauss': 'gaussian',
+    'gaus': 'gaussian',
     'dampsin' : 'dampsine', # forgive me father, for I have damp sin.
     'dampedsin': 'dampsine',
     'dampedsine': 'dampsine',
@@ -38,6 +40,6 @@ abbreviations = { # look up table, to convert an abbreviated model name to the m
     'dualgauss': 'dualgaussian',
     'quad':'quadratic',
     'poly2': 'quadratic',
-    't1':'T1' # here we need to conver back to uppser case
+    't1':'T1' # here we need to conver back to upper case
 }
 
