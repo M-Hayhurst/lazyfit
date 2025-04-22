@@ -190,6 +190,8 @@ class Wrapper:
             
             if xlim:    
                 plt.xlim(xlim)
+            if logx: # make sure to use same scale as main plot
+                ax2.set_xscale('log')
             plt.ylabel('Residual')
             plt.grid(axis='y')
             plt.xlabel(xlabel)
