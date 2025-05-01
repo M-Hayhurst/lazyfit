@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 import scipy.optimize
 import scipy.stats
 import lazyfit.utility as utility
-import types
 import textwrap
 from lazyfit.findmodel import find_model
+import inspect
 
 def fit(fittype, x, y, dy=None, guess=None, bounds=None, fix={}, verbose=False, options={}):
     """Provides a short cut to creating a Wrapper object and calling fit()"""
@@ -65,7 +65,10 @@ class Wrapper:
 
         # generate guess
         if guess is None:
-            self.guess = self.model.guess(self.x, self.y)
+            if 'fix' in inspect.getfullargspec(self.model.guess).args: # there are a few edge cases where you need to fix some of the fitting parameters to estimate the remaining ones, in which we supply the fix dictionary
+                self.guess = self.model.guess(self.x, self.y, self.fix)
+            else:
+                self.guess = self.model.guess(self.x, self.y)
         else:
             self.guess = guess
 
