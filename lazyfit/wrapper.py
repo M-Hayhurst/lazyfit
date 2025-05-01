@@ -103,8 +103,8 @@ class Wrapper:
         # also save fit paramters and errors as dicts
         self.params_dict, self.errors_dict = {}, {}
         for i, var in enumerate(self.fitvars):
-            self.params_dict[var] = self.params[i]
-            self.errors_dict[var] = self.errors[i]
+            self.params_dict[var] = float(self.params[i]) # convert from np.array to python float
+            self.errors_dict[var] = float(self.errors[i]) # convert from np.array to python float
 
     def get_chi2(self):
         return np.sum((self.y - self.predict(self.x)) ** 2 / self.dy ** 2)
@@ -124,6 +124,14 @@ class Wrapper:
         if self.model.fwhm is None:
             raise Exception(f'The fit model {self.model.name} does not have a fwhm method')
         return self.model.fwhm(self)
+    
+    def get_risetime(self, *args, **kwargs):
+        '''Return the estimated rise time and the error on the rise time.
+        Will only work for fit models that contain a rise time method'''
+
+        if self.model.risetime is None:
+            raise Exception(f'The fit model {self.model.name} does not have a rise time method')
+        return self.model.risetime(self, *args, **kwargs)
 
     def plot(self, N=200, print_params=True, plot_guess=False, logy=False, logx=False, plot_residuals=False, figsize=(8,4), marker='o',
              xlabel='', ylabel='', xlim=None, ylim=None):

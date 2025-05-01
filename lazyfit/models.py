@@ -18,7 +18,7 @@ inf = float('inf')
 class LazyFitModel:
 	'''Class for containg fitmodels. '''
 
-	def __init__(self, name, f, guess=None, bounds=None, math_string=None, description=None, fwhm=None ):
+	def __init__(self, name, f, guess=None, bounds=None, math_string=None, description=None, fwhm=None, risetime=None ):
 		self.name = name # string containing model name
 		self.f = f # function for evaluating model
 		self.string = math_string # string with math expression
@@ -26,6 +26,7 @@ class LazyFitModel:
 		self.bounds = bounds # function for getting bounds
 		self.description = description # additional description
 		self.fwhm = fwhm # optional function to get full-width half-maximum of statistical distributions
+		self.risetime = risetime # optional function to get a risetime
 
 	def get_param_names(self):
 		'''return dictionary with names of fit parameters'''
@@ -649,7 +650,7 @@ def _fwhm_voigt(fit):
 	'''
 	val = utility.get_voigt_FWHM(fit.params_dict['G'], fit.params_dict['L'])
 	err = utility.get_voigt_FWHM_err(fit.params_dict['G'], fit.params_dict['L'], fit.errors_dict['G'], fit.errors_dict['L'], fit.COVB[2,3])
-	return val, err
+	return float(val), float(err)
 
 voigt = LazyFitModel('voigt', _func_voigt, _guess_voigt, _bounds_voigt, 'A*Voigt(x;x0,L,G)+B', fwhm=_fwhm_voigt)
 
@@ -684,7 +685,14 @@ def _bounds_logistic(x, y):
 	ub = [inf, inf, np.max(x), inf]
 	return (lb, ub)
 
-logistic = LazyFitModel('logistic', _func_logistic, _guess_logistic, _bounds_logistic, 'A/(1+exp(-(x-x0)*k))+B')
+def _risetime_logistic(fit, low=0.1, high=0.9):
+	'''get the rise time associated with the transition from a low value to a high value.
+	By default, a 10/90 risetime is used.
+	
+	Returns the estimate value and the error from the fit'''
+	return float(utility.get_logistic_risetime(fit.params_dict['k'], low, high)), float(utility.get_logistic_risetime_error(fit.params_dict['k'], fit.errors_dict['k'], low, high)) 
+
+logistic = LazyFitModel('logistic', _func_logistic, _guess_logistic, _bounds_logistic, 'A/(1+exp(-(x-x0)*k))+B', risetime=_risetime_logistic)
 
 ###########################################
 # logistic pulse
@@ -780,3 +788,54 @@ def _bounds_duallorentz(x, y):
 	return lb, ub
 
 duallorentz = LazyFitModel('duallorentz', _func_duallorentz, _guess_duallorentz, _bounds_duallorentz, 'A1*L(x;x1,FWHM1)+A2*L(x;x2,FWHM2)+B')
+
+###########################################
+# Beam waist size for Gaussian optics
+###########################################
+
+def _func_beamwidth(x, x0, w0, lam):
+	"""
+	Position dependent radius of a gaussian beam
+
+	Parameters:
+	x		position along optical axis
+	x0		waist position
+	w0		waist size
+	lam		wavelength (typically this is fixes)
+	"""
+	return w0*np.sqrt(1+(lam*(x-x0))**2/(pi*w0**2)**2)
+
+def _guess_beamwidth(x, y, fix):
+
+	# Since the wavelength is always known, we demand that it be fixed.
+	if fix is None or 'lam' not in fix:
+		raise Exception("The parameter 'lam' (wavelength) must be fixed, i.e. pass the kwarg fix={'lam':123}.")
+
+	# The strategy is then to find the minimum within the data and to use the (approximately) linear slope of the beam radius to estimate the waist size 
+	min_index = np.argmin(y)
+	x0 = x[min_index] # location of minimum
+
+	filt_left = x<x0
+	filt_right = x>=x0
+	if np.sum(filt_left)>np.sum(filt_right):
+		filt = filt_left # longest part of data, either before or after the minimum
+	else:
+		filt = filt_right
+
+	slope, intercept = _guess_lin(x[filt], y[filt]) # estimate linear slope
+	theta = np.atan(np.abs(slope)) # angle in radians
+	w0 = fix['lam']/(pi*theta)
+
+	# go back and set x0 to where the linear curve intersects the y-axis
+	x0 = x0-y[min_index]/slope
+
+	return [x0, w0, fix['lam']]
+
+
+def _bounds_beamwidth(x, y):
+	# assume peak to be withing x data, define sigma to be positive
+	lb = [-inf, 0, 0]
+	ub = [inf, inf, inf]
+	return lb, ub
+
+beamwidth = LazyFitModel('beamwidth', _func_beamwidth, _guess_beamwidth, _bounds_beamwidth, 'w0*(1+(lam*(x-x0)^2)^2/(pi*w0^2)^2)^1/2')
