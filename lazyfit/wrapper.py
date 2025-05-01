@@ -216,20 +216,20 @@ class Wrapper:
 
             for i in range(len(self.fitvars)):
                 if self.fix and self.fitvars[i] in self.fix:
-                    summary += '\n' + self.fitvars[i].ljust(ljust_len) + ': %.3g (FIXED)' % self.guess[i]
+                    summary += '\n' + self.fitvars[i].ljust(ljust_len) + ' : %.3g (FIXED)' % self.guess[i]
                 else:
-                    summary += '\n' + self.fitvars[i].ljust(ljust_len) + ': ' + utility.format_error(self.params[i],
+                    summary += '\n' + self.fitvars[i].ljust(ljust_len) + ' : ' + utility.format_error(self.params[i],
                                                                                                      self.errors[i])
 
             # print degrees of freedom
-            summary += f'\n\nN DOF: {self.n_DOF}'
+            summary += f'\n\nN DOF   : {self.n_DOF}'
 
             # print chi2 estimate if data has errors
             if self.has_dy:
                 chi2 = self.get_chi2()
-                summary += '\nchi2    = %2.4g' % chi2
-                summary += '\nchi2red = %2.4f' % (chi2 / self.n_DOF)
-                summary += '\np = %2.4f' % self.get_pval()
+                summary += '\nchi2    : %2.4g' % chi2
+                summary += '\nchi2red : %2.4f' % (chi2 / self.n_DOF)
+                summary += '\np-value : %2.4f' % self.get_pval()
 
             # wrap the text
 
