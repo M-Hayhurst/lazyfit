@@ -839,3 +839,57 @@ def _bounds_beamwidth(x, y):
 	return lb, ub
 
 beamwidth = LazyFitModel('beamwidth', _func_beamwidth, _guess_beamwidth, _bounds_beamwidth, 'w0*(1+(lam*(x-x0)^2)^2/(pi*w0^2)^2)^1/2')
+
+
+###########################################
+# Optical cavity transmission
+###########################################
+
+def _func_cavity_transmission(x, x0, FSR, F, A, B):
+	"""
+	Transmission of an optical cavity with periodically ocurring resonances,
+	see e.g. https://en.wikipedia.org/wiki/Fabry%E2%80%93P%C3%A9rot_interferometer
+
+	Parameters:
+	x		frequency of light
+	x0		resonance frequency of the 0'th mode
+	FSR		Free spectral range
+	F		finesse
+	A		amplitude of transmission
+	B		background
+	"""
+
+	delta = (x-x0)*2*pi # detuning in angular frequency
+	coeff_of_finesse = 4/np.sin(pi/F)**2
+
+	return B + A/(1+coeff_of_finesse*np.sin(delta/2/FSR)**2)
+
+def _guess_cavity_transmission(x, y):
+
+	# only consider the middle 10 to 90% of the data as automatic linewidth estimation of a peak at the edge of the data can be highly inaccurate
+	# find the largest peak
+	n = x.size
+	A, x0, FWHM, B = peak_finder(x[round(n*0.1):round(n*0.9)] ,y[round(n*0.1):round(n*0.9)])
+	#print(f'A {A}, x0 {x0}, FWHM {FWHM}, B {B}')
+
+	# now look for a peak which is more than 3 FWHM from the peak AND is more than 50% of the first peak
+	filt2 = (y>(B+A/2)) * (np.abs(x-x0)>3*FWHM)
+
+	if np.any(filt2): # there is another peak
+		detuning = np.abs(x0-x[filt2]) # find detuning from first peak to data where y-values are high enough
+		FSR = np.min(detuning) # pick the smallest detuning
+	else:
+		print('Warning. In estimating fit parameters for cavity_transmission, no second peak was detected. The estimated finesse and FSR will not be accurate.')
+		FSR = np.max(x) - np.min(x) # as we didn't find a second peak, assume the FSR is the width of the x-axis
+
+	F = FSR/FWHM
+
+	return [x0, FSR, F, A, B]
+
+def _bounds_cavity_transmission(x, y):
+	# assume peak to be withing x data, define sigma to be positive
+	lb = [-inf, 0, 0, 0, -inf]
+	ub = [inf, inf, inf, inf, inf]
+	return lb, ub
+
+cavity_transmission = LazyFitModel('cavity_transmission', _func_cavity_transmission, _guess_cavity_transmission, _bounds_cavity_transmission, '') # TODO find a nice way to write out model
