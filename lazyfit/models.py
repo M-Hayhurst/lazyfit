@@ -681,7 +681,7 @@ def _guess_logistic(x, y):
 	return [A,B, x50, k]
 
 def _bounds_logistic(x, y):
-	lb = [0, -inf, np.min(x), 0]
+	lb = [0, -inf, np.min(x), -inf]
 	ub = [inf, inf, np.max(x), inf]
 	return (lb, ub)
 
