@@ -49,7 +49,7 @@ class Wrapper:
             print(f'Warning: Removing {n_bad} cases of NaN or Inf from data to enable fitting')
 
         # find fit model
-        if type(fittype) is models.LazyFitModel: # a fitmodel saved in a simplenamespace was passed
+        if type(fittype) is models.LazyFitModel: # a fit model class has been passed directly
             self.model = fittype
         elif type(fittype) is str:
             self.model = find_model(fittype)

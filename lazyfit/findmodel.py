@@ -10,7 +10,7 @@ def find_model(model_name):
     '''
 
     # remove special characters and convert to lower case
-    model_name = re.sub('[\(\)\{\}<>\_\-]', '', model_name)
+    model_name = re.sub('[\(\)\{\}<>\-]', '', model_name)
     model_name = model_name.lower()
 
     # see if it exists
