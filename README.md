@@ -6,7 +6,7 @@ For mundane tasks, Lazyfit can yield a fit and plot with just two lines of code:
 
 ![Alt text](screenshots/Sine_example.PNG?raw=true "Title")
 
-Additionally, Lazyfit contains a growing library of common fit models encountered in the physical sciences. These models automatically estimate good starting points and bounds for the fit parameters, thus eliminating manual estimation.
+Additionally, Lazyfit contains a growing library of fit models encountered in the physical sciences. These models automatically estimate good starting points and bounds for the fit parameters, thus eliminating manual estimation.
 
 Finally, Lazyfit also contains a wrapper for fitting two-dimensional data, which removes the tedious process of converting data between matrices and 1d-arrays.
 
