@@ -4,6 +4,10 @@ import math as m
 
 EPSILON = 1E-20 # tiny offset applied to fit limits when fixing a paramter
 
+def significant_round(x, n):
+    '''round the float x to n significant digits'''
+    return round(x, n-1-int(m.floor(m.log10(abs(x)))))
+
 def format_error(y, dy, version=2):
 	"""return a nice string representation of a number and its error
 	Parameters:
@@ -18,51 +22,31 @@ def format_error(y, dy, version=2):
 	version 2 formats errors as y(dy) exponent
 	version 2 is more compact.
 
-	By convention, errors are a single digit unless the first digit is 1.
+	By convention, errors are reported with two significant digits
 	"""
 
-	# this is surprisingly hard, and I should probably just have found a library that does this
-	if np.isinf(dy):
-		return '%g.3±inf' % y
-	elif np.isnan(dy):
-		return '%g.3±nan' % y
-	elif dy == 0:
-		return '%g.3' % y
+	# this is surprisingly hard to implement
 
 	dy = np.abs(dy) # ensure  error is positive
 
-	y_exponent = int(m.floor(np.log10(np.abs(y))))  # order of magnitude
-	dy_exponent = int(m.floor(np.log10(dy)))
-	exp_diff = y_exponent - dy_exponent  # order of magnitude diff from y to dy
+	# process error
+	dy_rounded = significant_round(dy, 2) # round to two significant digits
+	dy_exponent = int(m.floor(np.log10(dy))) # get order of magnitude
 
-	# determinte how many digits we want on the error.
-	# We only want two digits if the first digit is 1, eg. 12.34+-0.41 should become 12.34(4), but 12.34+-0.12 should be 12.34(12)
-	dy_2digits = int(str(round(dy*10**(-dy_exponent+1)))[0:2]) # first two digits of error as int
-
-	if dy_2digits<20: # keep two
-		n_dy_digits = 2
-		dy_str = str(dy_2digits)
-	elif dy_2digits<95: # python rounds to nearest even number, so 9.5 gets rounded up
-		dy_str = str(round(dy_2digits/10)) # round to single digit
-		n_dy_digits = 1
-	else: # 96,97,98,99 need to be rounded up
-		dy_str = '1'
-		n_dy_digits = 1
-		dy_exponent += 1
-
-	# determine significant digits on y
-	y_digits = exp_diff + n_dy_digits - 1 # number of digits on y after decimal. Add one to match the 2 error digits
+	# process value
+	# first, determine how many digits we want. This depends on the magnitude of the error
+	y_exponent = int(m.floor(np.log10(np.abs(y))))  # value order of magnitude
+	y_n_digits = y_exponent - dy_exponent +1 # order of magnitude diff from y to dy
 	sign_buffer = ' ' if y>0 else '' # add a blank space if positive number so a - does not shift to coumns
-	y_str = '%.*f' % (y_digits, y / 10 ** y_exponent)
+	y_str = '%.*f' % (y_n_digits, y / 10 ** y_exponent) # this automatically performs the correct rounding of y
 
-	if version == 1:
-		#format as (y ± dy) exponent
+	if version == 1: #format as (y ± dy) exponent
+		dy_str = '%.*f' % (y_n_digits, dy_rounded / 10 ** y_exponent)
 		return '('+sign_buffer+ y_str + '±' + dy_str + ')e'+str(y_exponent)
-	
-	elif version == 2:
-		# format as y(dy) exponent
-		return sign_buffer + y_str +'(' +dy_str + ')e'+str(y_exponent)
 
+	elif version == 2: # format as y(dy) exponent
+		dy_str = str(round(dy_rounded*10**(-dy_exponent+1)))[0:2]
+		return sign_buffer + y_str +'(' +dy_str + ')e'+str(y_exponent)
 
 def clean_data(x, y, dy=None):
 	"""remove any NaN or inf in the data and sort the data to ensure monotoneously increasing x values
