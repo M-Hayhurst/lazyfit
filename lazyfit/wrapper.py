@@ -87,8 +87,12 @@ class Wrapper:
             ind = self.fitvars.index(key)
 
             # go to this index, fix bounds and guess to the value
-            self.bounds[0][ind] = val * 0.999999 - utility.EPSILON
-            self.bounds[1][ind] = val * 1.000001 + utility.EPSILON
+            if val>=0: # if value if positive
+                self.bounds[0][ind] = val * 0.999999 - utility.EPSILON # slightly decrease the lower bound
+                self.bounds[1][ind] = val * 1.000001 + utility.EPSILON # slightly increase the upper bound
+            else:
+                self.bounds[0][ind] = val * 1.000001 - utility.EPSILON
+                self.bounds[1][ind] = val * 0.999999 + utility.EPSILON
             self.guess[ind] = val
 
     def fit(self, options={}):
